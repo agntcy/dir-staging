@@ -1,0 +1,25 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dir
+  namespace: argocd
+spec:
+  description: AGNTCY Directory Project
+  destinations:
+  - name: '*'
+    namespace: '*'
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  sourceRepos:
+  - https://github.com/agntcy/dir-staging
+  - https://spiffe.github.io/helm-charts-hardened
+  - ghcr.io
+status: {}

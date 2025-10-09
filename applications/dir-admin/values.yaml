@@ -1,0 +1,37 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ref: https://github.com/agntcy/dir/blob/main/install/charts/dirctl/values.yaml
+
+# Global config
+global:
+  cronjob:
+    failedJobsHistoryLimit: 10
+    successfulJobsHistoryLimit: 10
+    concurrencyPolicy: "Forbid"
+
+# Image config
+image:
+  repository: ghcr.io/agntcy/dir-ctl
+  tag: latest
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# SPIRE configuration
+spire:
+  enabled: true
+  trustDomain: example.org
+
+# Additional environment variables (applied to all cronjobs)
+env:
+  - name: DIRECTORY_CLIENT_SERVER_ADDRESS
+    value: dir-appset-dir-apiserver.dir.svc.cluster.local:8888
+
+# CronJobs configuration
+cronjobs:
+  # Search cronjob
+  search:
+    enabled: true
+    schedule: "* * * * *"
+    args:
+      - "search"

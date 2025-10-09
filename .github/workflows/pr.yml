@@ -1,19 +1,15 @@
 ---
-name: commit-msg
+name: PR
 
 on:
-  push:
-    # Run superlinter on pushes to default branch
-    branches:
-      - main
-  # Run superlinter on pull request events
   pull_request:
 
 # Declare default permissions as read-only
 permissions: read-all
 
 jobs:
-  conventional-commits:
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
     permissions:
       contents: read
