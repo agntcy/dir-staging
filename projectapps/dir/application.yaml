@@ -1,0 +1,19 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "dir-app"
+  namespace: argocd
+spec:
+  project: "dir"
+  source:
+    path: "applicationsets/dir"
+    repoURL: "https://github.com/agntcy/dir-staging"
+    targetRevision: main
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: {}

@@ -1,0 +1,92 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: "dir-appset"
+spec:
+  syncPolicy:
+    preserveResourcesOnDeletion: false
+  generators:
+    - merge:
+        mergeKeys:
+          - appName
+        generators:
+          - list:
+              elements:
+                - appName: spire-crds
+                  namespace: spire-crds
+                  syncWave: "0"
+                - appName: spire
+                  namespace: spire
+                  syncWave: "1"
+                - appName: dir
+                  namespace: dir
+                  syncWave: "2"
+                - appName: dir-admin
+                  namespace: dir-admin
+                  syncWave: "3"
+          # Get cluster config to set the cluster address
+          - matrix:
+              generators:
+                - list:
+                    elements:
+                      - appName: spire-crds
+                      - appName: spire
+                      - appName: dir
+                      - appName: dir-admin
+                - git:
+                    repoURL: "https://github.com/agntcy/dir-staging"
+                    revision: main
+                    files:
+                      - path: "clusters/dir/cluster-config.json"
+          # Get app config to set chart details
+          - matrix:
+              generators:
+                - list:
+                    elements:
+                      - appName: spire-crds
+                      - appName: spire
+                      - appName: dir
+                      - appName: dir-admin
+                - git:
+                    repoURL: "https://github.com/agntcy/dir-staging"
+                    revision: main
+                    files:
+                      - path: "applications/{{ appName }}/config.json"
+  template:
+    metadata:
+      name: "dir-appset-{{ appName }}"
+      labels:
+        app: "{{ appName }}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "{{ syncWave }}"
+    spec:
+      project: "dir"
+      sources:
+        - repoURL: "{{ chart_repo }}"
+          chart: "{{ chart_name }}"
+          targetRevision: "{{ chart_version }}"
+          helm:
+            ignoreMissingValueFiles: true
+            valueFiles:
+              # Default values file
+              - "$values/applications/{{ appName }}/values.yaml"
+              # Generated values file, usually created by scripts
+              - "$values/applications/{{ appName }}/gen.values.yaml"
+        - repoURL: "https://github.com/agntcy/dir-staging"
+          targetRevision: main
+          ref: values
+      destination:
+        server: "{{ cluster_address }}"
+        namespace: "{{ namespace }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: false
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - SkipDryRunOnMissingResource=true
+          - RespectIgnoreDifferences=true

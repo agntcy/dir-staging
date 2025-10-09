@@ -1,0 +1,25 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: Apache-2.0
+
+# Ref: https://github.com/spiffe/helm-charts-hardened/blob/main/charts/spire/values.yaml
+
+global:
+  spire:
+    trustDomain: "example.org"
+
+    tools:
+      kubectl:
+        tag: "v1.28.0"
+
+  installAndUpgradeHooks:
+    enabled: false
+
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+
+  controllerManager:
+    watchClassless: true
