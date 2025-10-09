@@ -5,10 +5,10 @@ repository:
   # See https://developer.github.com/v3/repos/#edit for all available settings.
 
   # The name of the repository. Changing this will rename the repository
-  name: repo-template
+  name: dir-staging
 
   # A short description of the repository that will show up on GitHub
-  description: Agntcy Project Repo Template
+  description: Agent Directory Service Staging GitOps
 
   # A URL with more information about the repository
   homepage: https://www.example.com
@@ -17,7 +17,7 @@ repository:
   topics: github, probot
 
   # Either `true` to make the repository private, or `false` to make it public.
-  private: true
+  private: false
 
   # Either `true` to enable issues for this repository, `false` to disable them.
   has_issues: true
@@ -41,7 +41,7 @@ repository:
 
   # Either `true` to allow merging pull requests with a merge commit, or `false`
   # to prevent merging pull requests with merge commits.
-  allow_merge_commit: true
+  allow_merge_commit: false
 
   # Either `true` to allow rebase-merging pull requests, or `false` to prevent
   # rebase-merging.
@@ -52,7 +52,7 @@ repository:
 
   # Either `true` to enable automated security fixes, or `false` to disable
   # automated security fixes.
-  enable_automated_security_fixes: true
+  enable_automated_security_fixes: false
 
   # Either `true` to enable vulnerability alerts, or `false` to disable
   # vulnerability alerts.
