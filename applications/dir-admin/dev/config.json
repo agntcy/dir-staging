@@ -1,5 +1,5 @@
 {
   "chart_repo": "ghcr.io",
   "chart_name": "agntcy/dir/helm-charts/dirctl",
-  "chart_version": "v0.3.0"
+  "chart_version": "v0.4.2"
 }
