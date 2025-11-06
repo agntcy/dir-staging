@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: "dir-prod-projectapp"
+  namespace: argocd
+spec:
+  project: "dir-prod"
+  source:
+    path: "applicationsets/dir/prod"
+    repoURL: "https://github.com/agntcy/dir-staging"
+    targetRevision: main
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: {}

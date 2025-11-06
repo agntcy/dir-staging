@@ -1,0 +1,38 @@
+# Ref: https://github.com/agntcy/dir/blob/main/install/charts/dirctl/values.yaml
+
+# Global config
+global:
+  cronjob:
+    failedJobsHistoryLimit: 10
+    successfulJobsHistoryLimit: 10
+    concurrencyPolicy: "Forbid"
+
+# Image config
+image:
+  repository: ghcr.io/agntcy/dir-ctl
+  tag: v0.4.0
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# SPIRE configuration
+spire:
+  enabled: true
+  trustDomain: prod.directory.outshift
+
+# Additional environment variables (applied to all cronjobs)
+env:
+  - name: DIRECTORY_CLIENT_SERVER_ADDRESS
+    value: prod.api.directory.outshift.test:443
+  - name: DIRECTORY_CLIENT_AUTH_MODE
+    value: "x509"
+  - name: DIRECTORY_CLIENT_JWT_AUDIENCE
+    value: "spiffe://prod.directory.outshift/spire/server"
+
+# CronJobs configuration
+cronjobs:
+  # Search cronjob
+  search:
+    enabled: true
+    schedule: "* * * * *"
+    args:
+      - "search"

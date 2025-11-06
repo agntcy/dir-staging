@@ -1,0 +1,4 @@
+{
+  "cluster_name": "local-prod",
+  "cluster_address": "https://kubernetes.default.svc"
+}

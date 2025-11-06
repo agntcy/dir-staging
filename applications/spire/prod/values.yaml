@@ -1,0 +1,30 @@
+# Ref: https://github.com/spiffe/helm-charts-hardened/blob/main/charts/spire/values.yaml
+
+global:
+  spire:
+    trustDomain: "prod.directory.outshift"
+    ingressControllerType: ingress-nginx
+    tools:
+      kubectl:
+        tag: "v1.28.0"
+
+  installAndUpgradeHooks:
+    enabled: false
+
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+    ingress:
+      enabled: true
+      host: prod.spire.directory.outshift.test
+
+  controllerManager:
+    watchClassless: true
+
+spiffe-oidc-discovery-provider:
+  ingress:
+    enabled: true
+    host: prod.oidc-discovery-spire.directory.outshift.test

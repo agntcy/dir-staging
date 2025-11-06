@@ -1,0 +1,296 @@
+# Ref: https://github.com/agntcy/dir/blob/main/install/charts/dir/values.yaml
+
+apiserver:
+  # Logging configuration
+  log_level: INFO
+  log_format: json
+  grpc_logging_verbose: false
+
+  # Image configuration
+  image:
+    repository: ghcr.io/agntcy/dir-apiserver
+    tag: v0.4.0
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+
+  # Expose the P2P API via NodePort for external access
+  routingService:
+    type: NodePort
+    nodePort: 30555
+    # Preserve source IPs for P2P (recommended)
+    externalTrafficPolicy: Local
+
+  # Expose the DIR API via ClusterIP for internal access
+  service:
+    type: ClusterIP
+
+  # Expose the DIR API via Ingress for external access (with TLS passthrough)
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      # Enable SSL passthrough - ingress will NOT terminate TLS
+      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      # Backend protocol is gRPC over TLS (SPIFFE mTLS)
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"
+    hosts:
+      - host: prod.api.directory.outshift.test
+        http:
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+              backend:
+                service:
+                  name: dir-dir-prod-argoapp-apiserver
+                  port:
+                    number: 8888
+    tls:
+      - hosts:
+        - prod.api.directory.outshift.test 
+
+  # SPIRE configuration
+  spire:
+    enabled: true
+    trustDomain: prod.directory.outshift
+
+  # API server configuration
+  config:
+    listen_address: "0.0.0.0:8888"
+
+    # Authentication settings (handles identity verification)
+    # Supports both X.509 (X.509-SVID) and JWT (JWT-SVID) authentication
+    authn:
+      # Enable authentication
+      enabled: true
+      # Authentication mode: "x509" or "jwt"
+      # - x509: Uses X.509-SVID from mutual TLS peer certificates
+      # - jwt: Uses JWT-SVID from Authorization header
+      mode: "x509"
+      # SPIFFE Workload API socket path (injected by SPIRE agent)
+      socket_path: "unix:///run/spire/agent-sockets/api.sock"
+      # Expected audiences for JWT validation (only used in JWT mode)
+      audiences:
+        - "spiffe://prod.directory.outshift/spire/server"
+
+    # Authorization settings (handles access control policies)
+    # Requires authentication to be enabled first
+    authz:
+      # Enable authorization policies
+      enabled: true
+      # Trust domain for this Directory server
+      # Used to distinguish internal (same trust domain) vs external requests
+      trust_domain: "prod.directory.outshift"
+
+    # Store settings for the storage backend.
+    store:
+      # Storage provider to use.
+      provider: "oci"
+
+      # OCI-backed store
+      oci:
+        # Path to a local directory that will be to hold data instead of remote.
+        # If this is set to non-empty value, only local store will be used.
+        # local_dir: ""
+
+        # Cache directory to use for metadata.
+        # cache_dir: ""
+
+        # Registry address to connect to
+        # Use the external address of the Zot registry
+        registry_address: "prod.zot.directory.outshift.test"
+        
+        # All data will be stored under this repo.
+        # Objects are pushed as tags, manifests, and blobs.
+        # repository_name: ""
+
+        # Auth credentials to use.
+        auth_config:
+          insecure: "false"
+          username: "admin"
+          password: "admin"
+
+    # Routing settings for the peer-to-peer network.
+    routing:
+      # Address to use for routing
+      listen_address: "/ip4/0.0.0.0/tcp/5555"
+
+      # Path to private key file for peer ID.
+      # TODO: generate and mount via secret
+      # key_path: /etc/routing/node.privkey
+
+      # Path to the routing datastore
+      datastore_dir: /etc/routing/datastore
+
+      # Address of the Directory API server for sync operations
+      # Use the external address of the API server
+      directory_api_address: prod.api.directory.outshift.test:443
+
+      # Nodes to use for bootstrapping of the DHT.
+      # Since we are the bootstrap node, this can be left empty.
+      # bootstrap_peers:
+      #   - /ip4/1.1.1.1/tcp/1
+      #   - /ip4/1.1.1.1/tcp/2
+
+      # GossipSub configuration for efficient label announcements
+      # When enabled, labels are propagated via GossipSub mesh to ALL subscribed peers
+      # When disabled, falls back to DHT+Pull mechanism (higher bandwidth, limited reach)
+      # Default: true (recommended for production)
+      gossipsub:
+        enabled: true
+
+    # Rate Limiting Configuration
+    ratelimit:
+      enabled: true
+      per_client_rps: 100
+      per_client_burst: 200
+
+    # Events Configuration
+    events:
+      subscriber_buffer_size: 100
+      log_slow_consumers: true
+      log_published_events: false
+
+    # Sync configuration
+    sync:
+      # How frequently the scheduler checks for pending syncs
+      scheduler_interval: "30s"
+      
+      # Maximum number of sync workers running concurrently
+      worker_count: 3
+      
+      # Timeout for individual sync operations
+      worker_timeout: "10m"
+      
+      # Registry monitor configuration
+      registry_monitor:
+        check_interval: "1m"
+
+      # Authentication configuration for sync operations
+      auth_config:
+        username: "user"
+        password: "user"
+
+    # Publication configuration
+    publication:
+      # How frequently the scheduler checks for pending publications
+      scheduler_interval: "15m"
+      
+      # Maximum number of publication workers running concurrently
+      worker_count: 2
+      
+      # Timeout for individual publication operations
+      worker_timeout: "30m"
+
+  # Extra environment variables for the apiserver container.
+  # Add ZOT CA certs here for OCI registry TLS verification.
+  extraEnv:
+  - name: SSL_CERT_DIR
+    value: "/etc/ca-certs"
+
+  # Persistance storage for routing datastore
+  pvc:
+    create: true
+    storageClassName: "" # Use default storage class
+    size: 5Gi
+
+  # Extra volume mounts for the apiserver container
+  extraVolumeMounts: 
+  - name: zot-config-storage
+    mountPath: /etc/zot
+  - name: dir-ca-certs
+    mountPath: /etc/ca-certs
+
+  # Extra volumes
+  extraVolumes: 
+  # Zot config storage volume for config hot-reloading
+  - name: zot-config-storage
+    hostPath:
+      path: /opt/zot-config
+      type: DirectoryOrCreate
+  # CA certs for Zot registry TLS verification
+  - name: dir-ca-certs
+    secret:
+      secretName: prod-zot-directory-outshift-test-tls
+      items:
+      - key: ca.crt
+        path: zot-ca.crt
+
+  # Zot registry configuration (subchart)
+  zot:
+    # Add persistence for data
+    persistence: true
+    pvc:
+      create: true
+      storage: 100Gi
+      storageClassName: "" # Use default storage class
+      accessModes: ["ReadWriteOnce"]
+
+    # Expose the Zot registry via Ingress for external access (with TLS termination)
+    ingress:
+      enabled: true
+      className: "nginx"
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+      hosts:
+        - host: prod.zot.directory.outshift.test
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - secretName: prod-zot-directory-outshift-test-tls # legit:ignore
+          hosts:
+            - prod.zot.directory.outshift.test
+
+    # ZOT secrets
+    mountSecret: true
+    authHeader: "admin:admin"
+    secretFiles:
+      # Example htpasswd with 'admin:admin' & 'user:user' user:pass pairs
+      htpasswd: |-
+        admin:$2y$05$vmiurPmJvHylk78HHFWuruFFVePlit9rZWGA/FbZfTEmNRneGJtha
+        user:$2y$05$L86zqQDfH5y445dcMlwu6uHv.oXFgT6AiJCwpv3ehr7idc0rI3S2G
+  
+    # Zot config
+    mountConfig: true
+    configFiles:
+      config.json: |-
+        {
+          "distSpecVersion": "1.1.1",
+          "storage": {
+            "rootDirectory": "/var/lib/registry"
+          },
+          "http": {
+            "address": "0.0.0.0",
+            "port": "5000",
+            "auth": {
+              "htpasswd": {
+                "path": "/secret/htpasswd"
+              }
+            },
+            "accessControl": {
+              "adminPolicy": {
+                  "users": ["admin"],
+                  "actions": ["read", "create", "update", "delete"]
+              },
+              "repositories": {
+                "**": {
+                  "anonymousPolicy": [],
+                  "defaultPolicy": ["read"]
+                }
+              }
+            }
+          },
+          "log": {
+            "level": "info"
+          },
+          "extensions": {
+            "search": {
+              "enable": true
+            },
+            "trust": {
+              "enable": true,
+              "cosign": true,
+              "notation": false
+            }
+          }
+        }
