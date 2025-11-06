@@ -1,26 +1,57 @@
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
-
 # Ref: https://github.com/agntcy/dir/blob/main/install/charts/dir/values.yaml
 
 apiserver:
+  log_level: DEBUG
+
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: latest
+    tag: v0.4.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
+  # Expose the DIR API via NodePort for external access
   service:
     type: NodePort
+
+  # Expose the P2P API via NodePort for external access
+  routingService:
+    type: NodePort
+    nodePort: 30555
+    # Preserve source IPs for P2P (recommended)
+    externalTrafficPolicy: Local
 
   # SPIRE configuration
   spire:
     enabled: true
-    trustDomain: example.org
+    trustDomain: dev.directory.outshift
 
+  # API server configuration
   config:
-    # listen_address: "0.0.0.0:8888"
-    # healthcheck_address: "0.0.0.0:8889"
+    listen_address: "0.0.0.0:8888"
+
+    # Authentication settings (handles identity verification)
+    # Supports both X.509 (X.509-SVID) and JWT (JWT-SVID) authentication
+    authn:
+      # Enable authentication
+      enabled: true
+      # Authentication mode: "x509" or "jwt"
+      # - x509: Uses X.509-SVID from mutual TLS peer certificates
+      # - jwt: Uses JWT-SVID from Authorization header
+      mode: "x509"
+      # SPIFFE Workload API socket path (injected by SPIRE agent)
+      socket_path: "unix:///run/spire/agent-sockets/api.sock"
+      # Expected audiences for JWT validation (only used in JWT mode)
+      audiences:
+        - "spiffe://dev.directory.outshift/spire/server"
+
+    # Authorization settings (handles access control policies)
+    # Requires authentication to be enabled first
+    authz:
+      # Enable authorization policies
+      enabled: true
+      # Trust domain for this Directory server
+      # Used to distinguish internal (same trust domain) vs external requests
+      trust_domain: "dev.directory.outshift"
 
     # Store settings for the storage backend.
     store:
@@ -37,7 +68,7 @@ apiserver:
         # cache_dir: ""
 
         # Registry address to connect to
-        registry_address: "dir-appset-dir-zot.dir.svc.cluster.local:5000"
+        registry_address: "dir-dir-dev-argoapp-zot.dir-dev-dir.svc.cluster.local:5000"
         
         # All data will be stored under this repo.
         # Objects are pushed as tags, manifests, and blobs.
@@ -52,10 +83,17 @@ apiserver:
     # Routing settings for the peer-to-peer network.
     routing:
       # Address to use for routing
-      # listen_address: "/ipv4/0.0.0.0/tcp/5555"
+      listen_address: "/ip4/0.0.0.0/tcp/5555"
 
       # Path to private key file for peer ID.
-      # key_path: /tmp/agntcy-dir/node.privkey
+      # TODO: generate and mount via secret
+      # key_path: /etc/routing/node.privkey
+
+      # Path to the routing datastore
+      datastore_dir: /etc/routing/datastore
+
+      # Address of the Directory API server for sync operations
+      directory_api_address: dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local:8888
 
       # Nodes to use for bootstrapping of the DHT.
       # We read initial routing tables here and get introduced
@@ -106,13 +144,19 @@ apiserver:
   extraVolumeMounts: 
   - name: zot-config-storage
     mountPath: /etc/zot
+  - name: dir-routing-storage
+    mountPath: /etc/routing
 
-  # Extra volumes - shared between apiserver and zot for config hot reload
+  # Extra volumes
   extraVolumes: 
+  # Zot config storage volume for config hot-reloading
   - name: zot-config-storage
     hostPath:
       path: /opt/zot-config
       type: DirectoryOrCreate
+  # Routing storage volume for peer-to-peer data
+  - name: dir-routing-storage
+    emptyDir: {}
 
   # Zot registry configuration (subchart)
   zot:

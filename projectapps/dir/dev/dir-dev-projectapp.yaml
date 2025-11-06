@@ -1,15 +1,12 @@
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
-
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: "dir-app"
+  name: "dir-dev-projectapp"
   namespace: argocd
 spec:
-  project: "dir"
+  project: "dir-dev"
   source:
-    path: "applicationsets/dir"
+    path: "applicationsets/dir/dev"
     repoURL: "https://github.com/agntcy/dir-staging"
     targetRevision: main
   destination:

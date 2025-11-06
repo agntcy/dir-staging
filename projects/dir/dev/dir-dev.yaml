@@ -1,13 +1,10 @@
-# Copyright AGNTCY Contributors (https://github.com/agntcy)
-# SPDX-License-Identifier: Apache-2.0
-
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: dir
+  name: dir-dev
   namespace: argocd
 spec:
-  description: AGNTCY Directory Project
+  description: AGNTCY Directory Project - Dev
   destinations:
   - name: '*'
     namespace: '*'

@@ -1,4 +1,4 @@
 {
-  "cluster_name": "local-kind-dev",
+  "cluster_name": "local-dev",
   "cluster_address": "https://kubernetes.default.svc"
 }
