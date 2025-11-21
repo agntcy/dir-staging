@@ -25,10 +25,6 @@ env:
     value: dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local:8888
   - name: DIRECTORY_CLIENT_AUTH_MODE
     value: "x509"
-  - name: DIRECTORY_CLIENT_JWT_AUDIENCE
-    value: "spiffe://example.org/spire/server"
-  - name: DIRECTORY_CLIENT_SPIFFE_SOCKET_PATH
-    value: "unix:/run/spire/agent-sockets/api.sock"
 
 # CronJobs configuration
 cronjobs:

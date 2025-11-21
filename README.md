@@ -15,15 +15,7 @@ The project will deploy the following components:
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
 
-## 🎉 What's New in v0.5.2
-
-- **Modern Version**: Updated to DIR v0.5.2 with latest features
-- **Resource Management**: Added resource limits optimized for local Kind clusters
-- **Security Hardening**: Applied Pod Security Standards (seccomp, capabilities, non-root)
-- **Rate Limiting**: Added API protection with configurable limits
-- **Production Guidance**: Documentation for PVCs, ExternalSecrets, and production deployment
-
-**For production deployment**, see [Production Deployment](#production-deployment) section below.
+**Latest Version**: v0.5.2 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
 
 ## Onboarding
 
@@ -102,7 +94,7 @@ with the Directory Server in the dev environment, follow these steps:
 ```bash
 kubectl exec spire-dir-dev-argoapp-server-0 -n dir-dev-spire -c spire-server -- \
    /opt/spire/bin/spire-server x509 mint \
-   -dns dev.api.example.test \
+   -dns dev.api.example.org \
    -spiffeID spiffe://example.org/local-client \
    -output json > spiffe-dev.json
 ```
@@ -342,7 +334,7 @@ with the Directory Server, follow these steps:
 ```bash
 kubectl exec spire-dir-prod-argoapp-server-0 -n dir-prod-spire -c spire-server -- \
    /opt/spire/bin/spire-server x509 mint \
-   -dns prod.api.example.test \
+   -dns prod.api.example.org \
    -spiffeID spiffe://example.org/local-client \
    -output json > spiffe-prod.json
 ```
@@ -355,7 +347,7 @@ export DIRECTORY_CLIENT_AUTH_MODE="token"
 export DIRECTORY_CLIENT_SPIFFE_TOKEN="spiffe-prod.json"
 
 # Set Directory Server address (via Ingress)
-export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.api.example.test:443"
+export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.api.example.org:443"
 
 # Or, set Directory Server address and skip TLS verification (via port-forwarding)
 export DIRECTORY_CLIENT_SERVER_ADDRESS="127.0.0.1:8888"
