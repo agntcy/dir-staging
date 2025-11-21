@@ -8,12 +8,22 @@ The manifests are organized into two main sections:
 - `projectapps/`: Contains Argo CD application definitions.
 
 The project will deploy the following components:
-- `applications/dir` - AGNTCY Directory server with storage backend
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client
+- `applications/dir` - AGNTCY Directory server with storage backend (v0.5.2)
+- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v0.5.2)
 - `applications/spire*` - SPIRE stack for identity and federation
 
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
+
+## 🎉 What's New in v0.5.2
+
+- **Modern Version**: Updated to DIR v0.5.2 with latest features
+- **Resource Management**: Added resource limits optimized for local Kind clusters
+- **Security Hardening**: Applied Pod Security Standards (seccomp, capabilities, non-root)
+- **Rate Limiting**: Added API protection with configurable limits
+- **Production Guidance**: Documentation for PVCs, ExternalSecrets, and production deployment
+
+**For production deployment**, see [Production Deployment](#production-deployment) section below.
 
 ## Onboarding
 
@@ -92,8 +102,8 @@ with the Directory Server in the dev environment, follow these steps:
 ```bash
 kubectl exec spire-dir-dev-argoapp-server-0 -n dir-dev-spire -c spire-server -- \
    /opt/spire/bin/spire-server x509 mint \
-   -dns dev.api.directory.outshift.test \
-   -spiffeID spiffe://dev.directory.outshift/local-client \
+   -dns dev.api.example.test \
+   -spiffeID spiffe://example.org/local-client \
    -output json > spiffe-dev.json
 ```
 
@@ -121,11 +131,50 @@ kubectl port-forward svc/dir-dir-dev-argoapp-apiserver -n dir-dev-dir 8888:8888
 dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 ```
 
-## Production Setup
+## Production Deployment
 
-If you wish to deploy production-grade setup with
-your own domains and Ingress capabilities on top,
-follow the steps below.
+This example configuration uses simplified settings for local Kind/Minikube testing.
+For production deployment, consider these enhancements:
+
+### This Example vs Production
+
+| Feature | This Example (Kind) | Production |
+|---------|---------------------|------------|
+| **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
+| **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |
+| **Resources** | 250m/512Mi | 500m-2000m / 1-4Gi |
+| **Ingress** | NodePort (local) | Ingress + TLS |
+| **Rate Limits** | 50 RPS | 500+ RPS |
+| **Trust Domain** | example.org | your-domain.com |
+| **Read-Only FS** | No (emptyDir) | Yes (with PVCs) |
+
+**This configuration is optimized for local testing. For production, enable the optional features documented below.**
+
+### Key Production Features
+
+**Persistent Storage**:
+- Enable PVCs for routing datastore and database (v0.5.2+)
+- Prevents data loss across pod restarts
+- See `pvc.create` and `database.pvc.enabled` in values.yaml
+
+**Secure Credential Management**:
+- Use ExternalSecrets Operator with Vault instead of hardcoded secrets
+- See commented ExternalSecrets configuration in values.yaml
+- Reference: agntcy-deployment repository for production patterns
+
+**Resource Sizing**:
+- Increase limits based on expected load (CPU: 500m-2000m, Memory: 1-4Gi)
+- Monitor and adjust after observing production traffic
+
+**Ingress & TLS**:
+- Configure Ingress for external access
+- Use cert-manager with Let's Encrypt for production certificates
+- Enable SSL passthrough for DIR API (SPIFFE mTLS)
+
+### Minikube Production Simulation
+
+If you wish to test production-like setup locally with Ingress and TLS,
+follow the steps below using Minikube.
 
 > [!NOTE]
 > We are using Minikube to simulate production setup,
@@ -293,8 +342,8 @@ with the Directory Server, follow these steps:
 ```bash
 kubectl exec spire-dir-prod-argoapp-server-0 -n dir-prod-spire -c spire-server -- \
    /opt/spire/bin/spire-server x509 mint \
-   -dns prod.api.directory.outshift.test \
-   -spiffeID spiffe://prod.directory.outshift/local-client \
+   -dns prod.api.example.test \
+   -spiffeID spiffe://example.org/local-client \
    -output json > spiffe-prod.json
 ```
 
@@ -306,7 +355,7 @@ export DIRECTORY_CLIENT_AUTH_MODE="token"
 export DIRECTORY_CLIENT_SPIFFE_TOKEN="spiffe-prod.json"
 
 # Set Directory Server address (via Ingress)
-export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.api.directory.outshift.test:443"
+export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.api.example.test:443"
 
 # Or, set Directory Server address and skip TLS verification (via port-forwarding)
 export DIRECTORY_CLIENT_SERVER_ADDRESS="127.0.0.1:8888"

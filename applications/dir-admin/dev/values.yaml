@@ -10,14 +10,14 @@ global:
 # Image config
 image:
   repository: ghcr.io/agntcy/dir-ctl
-  tag: v0.4.0
+  tag: v0.5.2
   pullPolicy: IfNotPresent
   pullSecrets: []
 
 # SPIRE configuration
 spire:
   enabled: true
-  trustDomain: dev.directory.outshift
+  trustDomain: example.org
 
 # Additional environment variables (applied to all cronjobs)
 env:
@@ -26,7 +26,9 @@ env:
   - name: DIRECTORY_CLIENT_AUTH_MODE
     value: "x509"
   - name: DIRECTORY_CLIENT_JWT_AUDIENCE
-    value: "spiffe://dev.directory.outshift/spire/server"
+    value: "spiffe://example.org/spire/server"
+  - name: DIRECTORY_CLIENT_SPIFFE_SOCKET_PATH
+    value: "unix:/run/spire/agent-sockets/api.sock"
 
 # CronJobs configuration
 cronjobs:
