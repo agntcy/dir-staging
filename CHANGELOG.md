@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.2 (2025-11-20)
+## v0.5.2 (2025-11-24)
 
 ### Updated
 - Bump DIR components to v0.5.2 (from v0.4.0)
@@ -11,6 +11,9 @@
 - Update trust domain to `example.org`
 
 ### Added
+- SQLite PVC configuration support for persistent database storage
+- Deployment strategy configuration (Recreate) to prevent lock conflicts
+- Automatic `/tmp` emptyDir mounting when `readOnlyRootFilesystem` is enabled
 - Resource limits (DIR: 250m/512Mi requests, Zot: 100m/256Mi requests)
 - Pod Security Standards (seccomp, runAsNonRoot, drop capabilities)
 - Rate limiting (50 RPS for local Kind)
@@ -23,7 +26,8 @@
 - Explicit user ID (65532)
 
 ### Documentation
-- Optional PVC persistence guide
+- Database PVC persistence guide for production
+- Deployment strategy requirements for PVC usage
 - ExternalSecrets pattern documentation
 - Production deployment considerations
 
