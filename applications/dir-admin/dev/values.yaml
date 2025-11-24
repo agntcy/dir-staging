@@ -10,14 +10,14 @@ global:
 # Image config
 image:
   repository: ghcr.io/agntcy/dir-ctl
-  tag: v0.4.0
+  tag: v0.5.2
   pullPolicy: IfNotPresent
   pullSecrets: []
 
 # SPIRE configuration
 spire:
   enabled: true
-  trustDomain: dev.directory.outshift
+  trustDomain: example.org
 
 # Additional environment variables (applied to all cronjobs)
 env:
@@ -25,8 +25,6 @@ env:
     value: dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local:8888
   - name: DIRECTORY_CLIENT_AUTH_MODE
     value: "x509"
-  - name: DIRECTORY_CLIENT_JWT_AUDIENCE
-    value: "spiffe://dev.directory.outshift/spire/server"
 
 # CronJobs configuration
 cronjobs:

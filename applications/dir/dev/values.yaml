@@ -5,9 +5,33 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v0.4.0
+    tag: v0.5.2
     pullPolicy: IfNotPresent
     pullSecrets: []
+  
+  # Resource limits for local Kind deployment
+  # For production, increase based on expected load (e.g., 500m CPU, 1Gi RAM requests)
+  resources:
+    requests:
+      cpu: 250m          # Modest for local testing
+      memory: 512Mi
+    limits:
+      cpu: 1000m         # Allow bursts
+      memory: 2Gi
+  
+  # ============================================================================
+  # OPTIONAL PRODUCTION FEATURES (Not configured in this example)
+  # ============================================================================
+  # This example uses simple configuration for local Kind/testing.
+  # For production deployment, consider enabling:
+  #
+  # • Persistent Storage (PVCs) - Data persists across restarts
+  # • ExternalSecrets - Secure credential management with Vault
+  # • Ingress & TLS - External access with certificates
+  # • Higher resource limits - Based on expected production load
+  #
+  # See documentation: https://github.com/agntcy/dir/tree/main/docs/deployment
+  # ============================================================================
   
   # Expose the DIR API via NodePort for external access
   service:
@@ -23,7 +47,7 @@ apiserver:
   # SPIRE configuration
   spire:
     enabled: true
-    trustDomain: dev.directory.outshift
+    trustDomain: example.org
 
   # API server configuration
   config:
@@ -42,7 +66,7 @@ apiserver:
       socket_path: "unix:///run/spire/agent-sockets/api.sock"
       # Expected audiences for JWT validation (only used in JWT mode)
       audiences:
-        - "spiffe://dev.directory.outshift/spire/server"
+        - "spiffe://example.org/spire/server"
 
     # Authorization settings (handles access control policies)
     # Requires authentication to be enabled first
@@ -51,8 +75,17 @@ apiserver:
       enabled: true
       # Trust domain for this Directory server
       # Used to distinguish internal (same trust domain) vs external requests
-      trust_domain: "dev.directory.outshift"
+      trust_domain: "example.org"
 
+    # Rate limiting configuration (NEW in v0.5.0+)
+    # Protects against abuse and resource exhaustion
+    ratelimit:
+      enabled: true
+      global_rps: 50         # Requests per second (modest for Kind)
+      global_burst: 100      # Burst capacity
+      per_client_rps: 100    # Per authenticated client
+      per_client_burst: 200
+    
     # Store settings for the storage backend.
     store:
       # Storage provider to use.
@@ -140,6 +173,43 @@ apiserver:
       # Timeout for individual publication operations
       worker_timeout: "30m"
 
+  # Database configuration (NEW in v0.5.2)
+  # This example uses default /tmp/dir.db (ephemeral)
+  # For production persistence, uncomment and enable PVC below:
+  #
+  # database:
+  #   type: "sqlite"
+  #   sqlite:
+  #     dbPath: "/var/lib/dir/database/dir.db"  # Path on PVC
+  #   pvc:
+  #     enabled: true
+  #     create: true
+  #     storageClassName: "your-storage-class"
+  #     size: 1Gi  # Database size (search index, sync state, publication queue)
+  #     accessMode: ReadWriteOnce
+  #
+  # Benefits: Database persists across restarts, faster recovery, enables readOnlyRootFilesystem
+
+  # Pod Security Standards (NEW in v0.5.2 example)
+  # Enhanced security for production-grade deployments
+  podSecurityContext:
+    fsGroup: 65532            # Allows non-root user to write to volumes
+    runAsNonRoot: true        # Enforce non-root execution
+    runAsUser: 65532          # Explicit user ID (matches Dockerfile)
+    seccompProfile:           # Syscall filtering
+      type: RuntimeDefault
+
+  # Container security context
+  securityContext:
+    allowPrivilegeEscalation: false  # Prevent privilege escalation
+    runAsNonRoot: true               # Enforce non-root at container level
+    runAsUser: 65532                 # Explicit UID
+    capabilities:
+      drop:
+        - ALL                        # Drop all capabilities (least privilege)
+    # Note: readOnlyRootFilesystem not enabled with emptyDir storage
+    # For production with PVCs, enable this for maximum security
+
   # Extra volume mounts for the apiserver container
   extraVolumeMounts: 
   - name: zot-config-storage
@@ -160,6 +230,15 @@ apiserver:
 
   # Zot registry configuration (subchart)
   zot:
+    # Resource limits for Zot registry
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+    
     extraVolumeMounts: []
     extraVolumes: []
     

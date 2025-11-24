@@ -2,7 +2,7 @@
 
 global:
   spire:
-    trustDomain: "dev.directory.outshift"
+    trustDomain: "example.org"
     tools:
       kubectl:
         tag: "v1.28.0"
