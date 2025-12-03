@@ -133,6 +133,7 @@ For production deployment, consider these enhancements:
 | Feature | This Example (Kind) | Production |
 |---------|---------------------|------------|
 | **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
+| **Deployment Strategy** | Recreate (default) | Recreate (required with PVCs) |
 | **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |
 | **Resources** | 250m/512Mi | 500m-2000m / 1-4Gi |
 | **Ingress** | NodePort (local) | Ingress + TLS |
@@ -148,6 +149,7 @@ For production deployment, consider these enhancements:
 - Enable PVCs for routing datastore and database (v0.5.2+)
 - Prevents data loss across pod restarts
 - See `pvc.create` and `database.pvc.enabled` in values.yaml
+- **IMPORTANT**: When using PVCs, set `strategy.type: Recreate` to prevent database lock conflicts
 
 **Secure Credential Management**:
 - Use ExternalSecrets Operator with Vault instead of hardcoded secrets

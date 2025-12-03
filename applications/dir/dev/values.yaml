@@ -189,6 +189,19 @@ apiserver:
   #     accessMode: ReadWriteOnce
   #
   # Benefits: Database persists across restarts, faster recovery, enables readOnlyRootFilesystem
+  
+  # Deployment strategy (NEW in v0.5.2)
+  # Default: Recreate (prevents database lock conflicts during updates)
+  # This is the chart default - explicit here for documentation
+  #
+  # IMPORTANT: When using PVCs (routing or database), Recreate strategy is REQUIRED
+  # to prevent BadgerDB/SQLite lock conflicts during rolling updates.
+  # With emptyDir (this example), RollingUpdate would work but Recreate is safer.
+  #
+  # strategy:
+  #   type: Recreate  # Terminates old pod before starting new one
+  #
+  # Trade-off: Brief downtime (10-15 seconds) during updates for clean deployments
 
   # Pod Security Standards (NEW in v0.5.2 example)
   # Enhanced security for production-grade deployments
