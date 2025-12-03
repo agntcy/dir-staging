@@ -5,7 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v0.5.2
+    tag: v0.5.5
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -45,13 +45,20 @@ apiserver:
     externalTrafficPolicy: Local
 
   # SPIRE configuration
+  # Chart v0.5.3+ defaults to SPIFFE CSI driver for reliable identity injection
   spire:
     enabled: true
     trustDomain: example.org
+    useCSIDriver: true  # Eliminates "certificate contains no URI SAN" auth failures
 
   # API server configuration
   config:
     listen_address: "0.0.0.0:8888"
+
+    # OASF API validation configuration (NEW in v0.5.5)
+    # Lax mode allows validation warnings (non-standard modules) but rejects actual errors
+    # Set to true for strict validation that rejects all warnings
+    oasf_api_validation_strict_mode: false
 
     # Authentication settings (handles identity verification)
     # Supports both X.509 (X.509-SVID) and JWT (JWT-SVID) authentication
