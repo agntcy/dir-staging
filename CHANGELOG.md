@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.5.5 (2025-12-03)
+
+### Updated
+- Bump DIR components to v0.5.5 (from v0.5.2)
+- Enable SPIFFE CSI driver for reliable identity injection (`useCSIDriver: true`)
+- Add OASF API validation configuration (lax mode by default)
+
+### Added
+- SPIFFE CSI driver configuration for dir-apiserver and dir-admin
+  - Eliminates "certificate contains no URI SAN" authentication failures
+  - Provides synchronous workload registration (no race conditions)
+- OASF validation lax mode (`oasf_api_validation_strict_mode: false`)
+  - Allows validation warnings for non-standard OASF modules
+  - Rejects actual validation errors
+
+### Changed
+- SPIRE integration now uses CSI ephemeral volumes instead of hostPath
+  - More secure (avoids hostPath in workload containers)
+  - More reliable (synchronous identity injection)
+
+---
+
 ## v0.5.2 (2025-11-24)
 
 ### Updated
