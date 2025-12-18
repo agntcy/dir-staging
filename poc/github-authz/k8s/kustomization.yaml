@@ -1,0 +1,24 @@
+# Kustomization for GitHub OAuth + Envoy Authentication PoC
+# Deploy with: kubectl apply -k poc/github-authz/k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: dir-dev-github-authz
+
+resources:
+  - namespace.yaml
+  - configmap-authz.yaml
+  - configmap-envoy.yaml
+  - deployment-authz.yaml
+  - deployment-envoy.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/part-of: directory-github-authz-poc
+  app.kubernetes.io/managed-by: kustomize
+
+# Image customization (override for local development)
+images:
+  - name: ghcr.io/agntcy/github-authz-server
+    newTag: dev
+

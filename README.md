@@ -123,6 +123,72 @@ kubectl port-forward svc/dir-dir-dev-argoapp-apiserver -n dir-dev-dir 8888:8888
 dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 ```
 
+### GitHub OAuth Authentication (PoC)
+
+> [!NOTE]
+> This is a Proof of Concept for [Issue #14](https://github.com/agntcy/dir-staging/issues/14).
+> It enables Directory access using GitHub OAuth tokens via an Envoy gateway.
+
+This PoC deploys an Envoy gateway with external authorization that validates GitHub OAuth tokens,
+allowing users to access the Directory API using their GitHub identity.
+
+1. Build and load the GitHub Auth Server image
+
+```bash
+# Build the image
+docker build -t ghcr.io/agntcy/github-authz-server:dev \
+  -f poc/github-authz/Dockerfile.authz poc/github-authz/
+
+# Load into Kind cluster
+kind load docker-image ghcr.io/agntcy/github-authz-server:dev --name dir-dev
+```
+
+2. Deploy the GitHub OAuth gateway
+
+```bash
+# Deploy using Kustomize
+kubectl apply -k poc/github-authz/k8s/
+
+# Wait for pods to be ready
+kubectl wait --for=condition=ready pod \
+  -l app.kubernetes.io/part-of=directory-github-authz-poc \
+  -n dir-dev-github-authz --timeout=60s
+```
+
+3. Test with a GitHub Personal Access Token
+
+Get a token from https://github.com/settings/tokens with `read:user` and `read:org` scopes.
+
+```bash
+# Port forward the Envoy gateway (using 8081 since 8080 is used by ArgoCD)
+kubectl port-forward -n dir-dev-github-authz svc/envoy-gateway 8081:8080 &
+
+# Test health check (no auth required)
+curl http://localhost:8081/healthz
+
+# Test with dirctl (requires updated dirctl with github auth mode)
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+export DIRECTORY_CLIENT_SERVER_ADDRESS="127.0.0.1:8081"
+export DIRECTORY_CLIENT_GITHUB_PAT="your_github_pat_here"
+dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
+```
+
+4. (Optional) Configure authorization rules
+
+```bash
+# Restrict to specific GitHub organizations
+kubectl patch configmap github-authz-config -n dir-dev-github-authz \
+  --type merge -p 'data:
+  GITHUB_ALLOWED_ORGS: "agntcy,spiffe"
+'
+
+# Restart to apply changes
+kubectl rollout restart deployment github-authz-server -n dir-dev-github-authz
+```
+
+See [poc/github-authz/k8s/README.md](poc/github-authz/k8s/README.md) for detailed configuration options
+and [docs/github-authz-poc.md](docs/github-authz-poc.md) for the architecture overview.
+
 ## Production Deployment
 
 This example configuration uses simplified settings for local Kind/Minikube testing.

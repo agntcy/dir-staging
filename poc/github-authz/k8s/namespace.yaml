@@ -1,0 +1,10 @@
+# Namespace for GitHub OAuth Authentication PoC
+# This deploys alongside the existing Directory deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: github-authz
+    app.kubernetes.io/part-of: directory
+

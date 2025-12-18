@@ -1,0 +1,201 @@
+# Envoy Proxy ConfigMap
+# Configures ext_authz filter to call GitHub Auth Server
+# Based on SPIRE Envoy JWT tutorials: https://github.com/spiffe/spire-tutorials/tree/main/k8s/envoy-jwt
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-github-authz-config
+  namespace: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: envoy-gateway
+    app.kubernetes.io/component: proxy
+data:
+  envoy.yaml: |
+    # Envoy configuration for GitHub OAuth authentication
+    # Routes authenticated requests to Directory API server
+
+    node:
+      id: "envoy-gateway"
+      cluster: "dir-dev-github-authz"
+    
+    admin:
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 9901
+
+    static_resources:
+      listeners:
+        - name: directory_listener
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 8080
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: ingress_http
+                    codec_type: AUTO
+                    http2_protocol_options: {}
+                    access_log:
+                      - name: envoy.access_loggers.stdout
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                    route_config:
+                      name: directory_route
+                      virtual_hosts:
+                        - name: directory_service
+                          domains: ["*"]
+                          routes:
+                            # Health check endpoint - no auth required
+                            - match:
+                                path: "/healthz"
+                              direct_response:
+                                status: 200
+                                body:
+                                  inline_string: '{"status": "healthy"}'
+                              typed_per_filter_config:
+                                envoy.filters.http.ext_authz:
+                                  "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                                  disabled: true
+                            # Envoy admin stats (for debugging)
+                            - match:
+                                prefix: "/stats"
+                              route:
+                                cluster: envoy_admin
+                              typed_per_filter_config:
+                                envoy.filters.http.ext_authz:
+                                  "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                                  disabled: true
+                            # All other requests require GitHub authentication
+                            - match:
+                                prefix: "/"
+                              route:
+                                cluster: directory_backend
+                                timeout: 30s
+                    http_filters:
+                      # External Authorization Filter - validates GitHub tokens
+                      - name: envoy.filters.http.ext_authz
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                          transport_api_version: V3
+                          grpc_service:
+                            envoy_grpc:
+                              cluster_name: github_auth_service
+                            timeout: 5s
+                          failure_mode_allow: false
+                          with_request_body:
+                            max_request_bytes: 8192
+                            allow_partial_message: true
+                      # Router filter (must be last)
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+      clusters:
+        # GitHub Auth Service - ext_authz backend
+        - name: github_auth_service
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config:
+                http2_protocol_options: {}
+          load_assignment:
+            cluster_name: github_auth_service
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          # Service in same namespace
+                          address: github-authz-server.dir-dev-github-authz.svc.cluster.local
+                          port_value: 9001
+
+        # Directory API Backend (gRPC/HTTP2 with SPIFFE mTLS)
+        - name: directory_backend
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config:
+                http2_protocol_options: {}
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+              common_tls_context:
+                tls_certificate_sds_secret_configs:
+                  - name: "spiffe://example.org/ns/dir-dev-github-authz/sa/envoy-gateway"
+                    sds_config:
+                      resource_api_version: V3
+                      api_config_source:
+                        api_type: GRPC
+                        transport_api_version: V3
+                        grpc_services:
+                          - envoy_grpc:
+                              cluster_name: spire_agent
+                combined_validation_context:
+                  default_validation_context:
+                    match_typed_subject_alt_names:
+                      - san_type: URI
+                        matcher:
+                          prefix: "spiffe://example.org/"
+                  validation_context_sds_secret_config:
+                    name: "spiffe://example.org"
+                    sds_config:
+                      resource_api_version: V3
+                      api_config_source:
+                        api_type: GRPC
+                        transport_api_version: V3
+                        grpc_services:
+                          - envoy_grpc:
+                              cluster_name: spire_agent
+          load_assignment:
+            cluster_name: directory_backend
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          # Directory API server in dir-dev-dir namespace
+                          address: dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local
+                          port_value: 8888
+
+        # SPIRE Agent SDS API cluster
+        - name: spire_agent
+          connect_timeout: 1s
+          type: STATIC
+          lb_policy: ROUND_ROBIN
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config:
+                http2_protocol_options: {}
+          load_assignment:
+            cluster_name: spire_agent
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        pipe:
+                          path: /run/spire/agent-sockets/api.sock
+        
+        # Envoy admin cluster (for stats endpoint)
+        - name: envoy_admin
+          type: STATIC
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: envoy_admin
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 127.0.0.1
+                          port_value: 9901
+

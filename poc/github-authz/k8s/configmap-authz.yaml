@@ -1,0 +1,36 @@
+# ConfigMap for GitHub Auth Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: github-authz-config
+  namespace: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: github-authz-server
+    app.kubernetes.io/component: auth
+data:
+  # Authorization rules - customize these for your deployment
+  # Organization allow list (comma-separated)
+  # Leave empty to allow all authenticated users
+  GITHUB_ALLOWED_ORGS: ""
+  
+  # User allow list (comma-separated)
+  # These users are allowed regardless of org membership
+  GITHUB_ALLOWED_USERS: ""
+  
+  # User deny list (comma-separated)
+  # These users are denied regardless of other rules
+  GITHUB_DENIED_USERS: ""
+  
+  # Team allow list (JSON format)
+  # Example: {"agntcy": ["developers", "platform-team"]}
+  GITHUB_ALLOWED_TEAMS: ""
+  
+  # Cache TTL for GitHub API responses
+  AUTHZ_CACHE_TTL: "5m"
+  
+  # Server port
+  AUTHZ_PORT: "9001"
+  
+  # Debug logging
+  DEBUG: "false"
+

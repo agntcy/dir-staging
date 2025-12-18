@@ -1,0 +1,105 @@
+# Envoy Gateway Deployment
+# Acts as edge proxy for GitHub-authenticated Directory API access
+# Based on SPIRE Envoy JWT tutorials: https://github.com/spiffe/spire-tutorials/tree/main/k8s/envoy-jwt
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-gateway
+  namespace: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: envoy-gateway
+    app.kubernetes.io/component: proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: envoy-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: envoy-gateway
+        app.kubernetes.io/component: proxy
+    spec:
+      serviceAccountName: envoy-gateway
+      containers:
+        - name: envoy
+          image: envoyproxy/envoy:v1.31-latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-c"
+            - "/etc/envoy/envoy.yaml"
+            - "-l"
+            - "info"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: admin
+              containerPort: 9901
+              protocol: TCP
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+              readOnly: true
+            - name: spiffe-workload-api
+              mountPath: /run/spire/agent-sockets
+              readOnly: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: envoy-github-authz-config
+        - name: spiffe-workload-api
+          csi:
+            driver: "csi.spiffe.io"
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway
+  namespace: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: envoy-gateway
+    app.kubernetes.io/component: proxy
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30088
+      protocol: TCP
+    - name: admin
+      port: 9901
+      targetPort: admin
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: envoy-gateway
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: envoy-gateway
+  namespace: dir-dev-github-authz
+  labels:
+    app.kubernetes.io/name: envoy-gateway
+

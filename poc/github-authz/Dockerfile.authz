@@ -1,0 +1,38 @@
+# Dockerfile for GitHub Authorization Server
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache git
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the authorization server
+RUN CGO_ENABLED=0 GOOS=linux go build -o /github-authz-server ./cmd/github-authz-server
+
+# Final image
+FROM alpine:3.19
+
+# Install grpc_health_probe for health checks
+RUN apk add --no-cache ca-certificates wget && \
+    wget -qO /bin/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.25/grpc_health_probe-linux-amd64 && \
+    chmod +x /bin/grpc_health_probe && \
+    apk del wget
+
+# Copy binary
+COPY --from=builder /github-authz-server /github-authz-server
+
+# Non-root user
+RUN adduser -D -u 1000 appuser
+USER appuser
+
+EXPOSE 9001
+
+ENTRYPOINT ["/github-authz-server"]
+
