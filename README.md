@@ -167,9 +167,26 @@ kubectl port-forward -n dir-dev-github-authz svc/envoy-gateway 8081:8080 &
 curl http://localhost:8081/healthz
 
 # Test with dirctl (requires updated dirctl with github auth mode)
-export DIRECTORY_CLIENT_AUTH_MODE="github"
 export DIRECTORY_CLIENT_SERVER_ADDRESS="127.0.0.1:8081"
-export DIRECTORY_CLIENT_GITHUB_PAT="your_github_pat_here"
+
+# To get GitHub OAuth credentials:
+# 1. Go to https://github.com/settings/developers
+# 2. Click "New OAuth App" (or use an existing one)
+# 3. Set Application name: e.g., "dirctl-local"
+# 4. Set Homepage URL: e.g., "http://localhost:8081"
+# 5. Set Authorization callback URL: "http://localhost:8484/callback"
+# 6. Click "Register application"
+# 7. Copy the Client ID shown on the app page
+# 8. Click "Generate a new client secret" and copy it
+
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+export DIRECTORY_CLIENT_GITHUB_CLIENT_ID="your_github_oauth_app_client_id"
+export DIRECTORY_CLIENT_GITHUB_CLIENT_SECRET="your_client_secret"
+
+# Login via interactive OAuth flow (opens browser)
+dirctl auth login
+
+# After successful login, run commands (token is cached automatically)
 dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 ```
 
