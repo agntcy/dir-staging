@@ -527,6 +527,8 @@ Federation requires configuring SPIRE to exchange trust bundles with other Direc
 
 4. **Deploy Directory's Federation File**
    - After approval, deploy `onboarding/federation/prod.ads.outshift.io.yaml` to your cluster
+   - Run `task gen:dir` to regenerate `applications/dir/gen.values.yaml`
+   - ArgoCD will automatically sync the federation configuration
    - This tells your SPIRE how to connect to the Directory network
 
 **Complete Instructions:** See the [Client Onboarding Guide](onboarding/README.md) for step-by-step federation setup.

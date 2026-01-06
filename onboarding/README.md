@@ -410,7 +410,40 @@ After your federation request is approved, configure your SPIRE server to federa
 
 1. **Obtain Directory's federation file**: Download `prod.ads.outshift.io.yaml` from the [federation directory](federation/)
 
-2. **Deploy to your cluster**: Use your preferred deployment method (Helm, ArgoCD, etc.) to apply the federation configuration
+2. **Deploy to your cluster**:
+
+   **Option A: Using this Repository (Recommended)**
+   
+   If you deployed Directory using this repository:
+   
+   ```bash
+   # Generate federation configuration
+   task gen:dir
+   
+   # This creates applications/dir/gen.values.yaml with all federation configs
+   # ArgoCD will automatically sync this to your cluster
+   ```
+   
+   **What `task gen:dir` does:**
+   - Scans `onboarding/federation/*.yaml` files (excluding templates)
+   - Merges them into `applications/dir/gen.values.yaml`
+   - Generates proper YAML structure for SPIRE federation
+   
+   **Option B: Manual Deployment**
+   
+   If you have a custom deployment:
+   
+   ```yaml
+   # Add to your DIR deployment values:
+   apiserver:
+     spire:
+       federation:
+       - className: dir-spire
+         trustDomain: prod.ads.outshift.io
+         bundleEndpointURL: https://prod.spire.ads.outshift.io
+         bundleEndpointProfile:
+           type: https_web
+   ```
 
 3. **Verify federation**:
    ```bash
