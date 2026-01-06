@@ -1,0 +1,28 @@
+# Federation Configuration Template (https_web profile)
+#
+# This template is for the https_web profile which requires:
+# - cert-manager with Let's Encrypt (or enterprise CA)
+# - Public DNS resolution for your federation endpoint
+# - NGINX ingress controller (standard configuration, no SSL passthrough needed)
+#
+# This is the recommended profile for most deployments.
+# See onboarding/README.md for profile comparison and guidance.
+
+# className for SPIRE Controller Manager resource matching
+# Standard value: dir-spire (do not change unless you have custom setup)
+className: dir-spire
+
+# Trust Domain: Your organization's SPIFFE trust domain
+trustDomain: example.com
+
+# Bundle Endpoint URL: Publicly accessible SPIRE federation endpoint
+# This must be accessible via HTTPS with a valid CA-signed certificate
+bundleEndpointURL: https://spire.example.com
+
+# Bundle Endpoint Profile: Configuration for https_web
+bundleEndpointProfile:
+  type: https_web
+
+# That's it! No bootstrap bundle exchange required with https_web profile.
+# The remote SPIRE server will fetch your bundle automatically via standard HTTPS.
+
