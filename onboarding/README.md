@@ -47,11 +47,11 @@ Directory is a decentralized peer-to-peer network that enables:
 
 ## 🌐 Available Endpoints
 
-| Service              | URL                                   | Purpose                                     |
-| -------------------- | ------------------------------------- | ------------------------------------------- |
-| **Directory API**    | `https://api.directory.agntcy.org`    | Main API for agent discovery and management |
-| **SPIRE Federation** | `https://spire.directory.agntcy.org`  | SPIRE server for secure identity federation |
-| **Status Dashboard** | `https://status.directory.agntcy.org` | Real-time service status and monitoring     |
+| Service              | URL                                      | Purpose                                     |
+| -------------------- | ---------------------------------------- | ------------------------------------------- |
+| **Directory API**    | `https://prod.api.ads.outshift.io`       | Main API for agent discovery and management |
+| **SPIRE Federation** | `https://prod.spire.ads.outshift.io`     | SPIRE server for secure identity federation |
+| **Status Dashboard** | `https://prod.status.ads.outshift.io`    | Real-time service status and monitoring     |
 
 ## 🚀 Quick Start Guide
 
@@ -97,14 +97,14 @@ Before you begin, ensure you have:
 
 2. **Configure the client**:
    ```bash
-   dirctl config set server-address api.directory.agntcy.org
+   dirctl config set server-address prod.api.ads.outshift.io
    dirctl config set spiffe-socket-path /tmp/spire-agent/public.sock
    ```
 
 3. **Test the connection**:
    ```bash
    dirctl ping
-   # Expected: ✅ Connected to Directory API at api.directory.agntcy.org
+   # Expected: ✅ Connected to Directory API at prod.api.ads.outshift.io
    ```
 
 #### Option 2: Using Directory Client SDK
@@ -127,7 +127,7 @@ import (
 func main() {
     // Create client with SPIRE support
     config := &client.Config{
-        ServerAddress:     "api.directory.agntcy.org",
+        ServerAddress:     "prod.api.ads.outshift.io",
         SpiffeSocketPath:  "/tmp/spire-agent/public.sock",
     }
     client, _ := client.New(client.WithConfig(config))
@@ -155,7 +155,7 @@ from agntcy.dir_sdk.client import Config, Client
 def main():
     # Create client with SPIRE support
     config = Config(
-        server_address="api.directory.agntcy.org",
+        server_address="prod.api.ads.outshift.io",
         spiffe_socket_path="/tmp/spire-agent/public.sock"
     )
     client = Client(config)
@@ -183,7 +183,7 @@ import {Config, Client} from 'agntcy-dir';
 async function main() {
     // Create client with SPIRE support
     const config = new Config({
-        serverAddress: "api.directory.agntcy.org",
+        serverAddress: "prod.api.ads.outshift.io",
         spiffeEndpointSocket: "/tmp/spire-agent/public.sock",
     });
     const transport = await Client.createGRPCTransport(config);
@@ -470,7 +470,7 @@ kubectl exec -n your-spire-namespace deployment/spire-server -c spire-server -- 
 
 # Test Directory API connection
 dirctl ping
-# Expected: ✅ Connected to Directory API at api.directory.agntcy.org
+# Expected: ✅ Connected to Directory API at prod.api.ads.outshift.io
 ```
 
 ## 📚 Use Cases
@@ -487,7 +487,7 @@ You can find various usage examples at [docs.agntcy.org](https://docs.agntcy.org
 spire-agent api fetch x509-svid
 
 # Verify network connectivity
-curl -v https://api.directory.agntcy.org
+curl -v https://prod.api.ads.outshift.io
 
 # Check client configuration
 dirctl config list
@@ -501,7 +501,7 @@ dirctl config list
 spire-server federation show --trustDomain dir.agntcy.org
 
 # Test bundle endpoint connectivity
-curl https://spire.directory.agntcy.org/
+curl https://prod.spire.ads.outshift.io/
 ```
 
 ### Common Error Messages
