@@ -294,7 +294,7 @@ For production deployment, consider these enhancements:
 **Secure Credential Management**:
 - Use ExternalSecrets Operator with Vault instead of hardcoded secrets
 - See commented ExternalSecrets configuration in values.yaml
-- Reference: agntcy-deployment repository for production patterns
+- See: [External Secrets Operator documentation](https://external-secrets.io/latest/)
 
 **Resource Sizing**:
 - Increase limits based on expected load (CPU: 500m-2000m, Memory: 1-4Gi)
