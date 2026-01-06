@@ -48,6 +48,7 @@ apiserver:
   # Chart v0.5.3+ defaults to SPIFFE CSI driver for reliable identity injection
   spire:
     enabled: true
+    className: dir-spire
     trustDomain: example.org
     useCSIDriver: true  # Eliminates "certificate contains no URI SAN" auth failures
 

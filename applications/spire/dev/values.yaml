@@ -18,4 +18,4 @@ spire-server:
     enabled: true
 
   controllerManager:
-    watchClassless: true
+    className: dir-spire
