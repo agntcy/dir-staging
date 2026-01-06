@@ -60,23 +60,18 @@ Choose your path based on your goal:
 > It uses a local Kind cluster with NodePort services and simplified security.
 > For production deployment with Ingress and TLS, see the [Production Setup](#production-setup) section below.
 
-> [!IMPORTANT]
-> **Before deploying:** Choose your **trust domain** carefully - it cannot be changed later!
+> [!NOTE]
+> **Trust Domain for Quick Start:** This deployment uses `example.org` as the trust domain for local testing.
 > 
-> A trust domain is a permanent identifier for your SPIRE deployment (e.g., `acme.com`, `engineering.acme.com`).
+> **This is fine for:**
+> - ✅ Local testing and development
+> - ✅ Learning Directory features
+> - ✅ Prototyping applications
 > 
-> Edit `applications/spire/dev/values.yaml` before deploying:
-> ```yaml
-> global:
->   spire:
->     trustDomain: "your-domain.com"  # Replace example.org with your domain
-> ```
-> 
-> **Important:**
-> - Must be globally unique
-> - Cannot be changed after deployment
-> - Doesn't need to be a real DNS domain
-> - Will be visible to federation partners
+> **Need a custom trust domain?**
+> - For production deployment: See [Production Setup](#production-setup) section
+> - For federation with Directory network: Fork this repo, customize, and deploy from your fork
+> - **Remember:** Trust domain cannot be changed after deployment
 
 This guide demonstrates how to set up AGNTCY Directory project using
 Argo CD in Kubernetes [Kind](https://kind.sigs.k8s.io/) cluster.
@@ -106,6 +101,17 @@ kubectl apply -f https://raw.githubusercontent.com/agntcy/dir-staging/main/proje
 
 # Add application
 kubectl apply -f https://raw.githubusercontent.com/agntcy/dir-staging/main/projectapps/dir/dev/dir-dev-projectapp.yaml
+
+# Wait for SPIRE components to be ready
+echo "Waiting for SPIRE to be ready..."
+kubectl wait --for=condition=ready pod -n dir-dev-spire -l app.kubernetes.io/name=server --timeout=240s
+kubectl wait --for=condition=ready pod -n dir-dev-spire -l app.kubernetes.io/name=agent --timeout=240s
+
+# Wait for Directory components to be ready
+echo "Waiting for Directory to be ready..."
+kubectl wait --for=condition=ready pod -n dir-dev-dir -l app.kubernetes.io/name=apiserver --timeout=240s
+
+echo "✅ Directory deployment complete!"
 ```
 
 4. Check results in ArgoCD UI
@@ -158,12 +164,13 @@ Congratulations! You now have a **standalone Directory instance** running with:
    - Deploy workloads that need SPIRE identities
    - Use the [Token-based Authentication](#token-based-directory-client-authentication-dev) section below for testing
 
-3. **Join the Directory Network (Recommended):**
-   - Enable federation to discover agents globally
-   - See: [Client Onboarding Guide](onboarding/README.md) for federation setup
-   - You'll need to:
-     - Create your federation file (tells others how to reach you)
-     - Deploy Directory's federation file (tells you how to reach Directory)
+3. **Want to Join the Directory Network?**
+   - ⚠️ **Important:** This Quick Start uses `example.org` trust domain, which is for **local testing only**
+   - **To federate with the Directory network, you need a unique trust domain**
+   - **Two options to federate:**
+     - **Option A (Recommended):** Deploy fresh using [Production Setup](#production-deployment) with your own trust domain
+     - **Option B (Advanced):** Fork this repo, change trust domain in configs, redeploy from your fork
+   - See: [Client Onboarding Guide](onboarding/README.md) for complete federation requirements
 
 **What's Missing?**
 - ❌ **Federation:** Your instance can't communicate with other Directory instances
@@ -171,7 +178,7 @@ Congratulations! You now have a **standalone Directory instance** running with:
 - ❌ **Production Features:** Persistent storage, TLS ingress, proper secrets management
 
 **Next Steps:**
-- **Want to join the network?** → [Federation Setup Guide](onboarding/README.md)
+- **Want to join the network?** → Need custom trust domain first (see [Production Deployment](#production-deployment))
 - **Want production features?** → See [Production Deployment](#production-deployment) section below
 - **Want to test locally first?** → Continue with [Token-based Auth](#token-based-directory-client-authentication-dev) below
 
@@ -231,6 +238,28 @@ dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 
 This example configuration uses simplified settings for local Kind/Minikube testing.
 For production deployment, consider these enhancements:
+
+> [!IMPORTANT]
+> **Before Production Deployment:** Choose your **trust domain** carefully - it cannot be changed later!
+> 
+> A trust domain is a permanent identifier for your SPIRE deployment (e.g., `acme.com`, `engineering.acme.com`).
+> 
+> **To customize the trust domain:**
+> 1. Fork this repository
+> 2. Edit `applications/spire/prod/values.yaml`:
+>    ```yaml
+>    global:
+>      spire:
+>        trustDomain: "your-domain.com"  # Replace example.org
+>    ```
+> 3. Commit and push to your fork
+> 4. Deploy from your fork instead of `agntcy/dir-staging`
+> 
+> **Trust Domain Requirements:**
+> - Must be globally unique
+> - Cannot be changed after deployment
+> - Doesn't need to be a real DNS domain (but can be)
+> - Will be visible to federation partners
 
 ### This Example vs Production
 
