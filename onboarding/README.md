@@ -103,8 +103,9 @@ Before you begin, ensure you have:
 
 3. **Test the connection**:
    ```bash
-   dirctl ping
-   # Expected: ✅ Connected to Directory API at prod.api.ads.outshift.io
+   dirctl pull bafytest123
+   # Expected: Error: record not found (proves connection works)
+   # If you see connection errors, check SPIRE agent status and network
    ```
 
 #### Option 2: Using Directory Client SDK
@@ -469,8 +470,8 @@ kubectl exec -n your-spire-namespace deployment/spire-server -c spire-server -- 
 # Trust Domain: prod.ads.outshift.io
 
 # Test Directory API connection
-dirctl ping
-# Expected: ✅ Connected to Directory API at prod.api.ads.outshift.io
+dirctl pull bafytest123
+# Expected: Error: record not found (proves connection and authentication work)
 ```
 
 ## 📚 Use Cases
