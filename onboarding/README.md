@@ -47,20 +47,37 @@ Directory is a decentralized peer-to-peer network that enables:
 
 ## 🌐 Available Endpoints
 
-| Service              | URL                                   | Purpose                                     |
-| -------------------- | ------------------------------------- | ------------------------------------------- |
-| **Directory API**    | `https://api.directory.agntcy.org`    | Main API for agent discovery and management |
-| **SPIRE Federation** | `https://spire.directory.agntcy.org`  | SPIRE server for secure identity federation |
-| **Status Dashboard** | `https://status.directory.agntcy.org` | Real-time service status and monitoring     |
+| Service              | URL                                      | Purpose                                     |
+| -------------------- | ---------------------------------------- | ------------------------------------------- |
+| **Directory API**    | `https://prod.api.ads.outshift.io`       | Main API for agent discovery and management |
+| **SPIRE Federation** | `https://prod.spire.ads.outshift.io`     | SPIRE server for secure identity federation |
+| **Status Dashboard** | `https://prod.status.ads.outshift.io`    | Real-time service status and monitoring     |
 
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
 
 Before you begin, ensure you have:
-- [ ] A SPIRE server setup in your organization
+- [ ] **A SPIRE server setup in your organization**
 - [ ] Basic understanding of SPIFFE/SPIRE concepts
 - [ ] Directory client SDK or CLI tools available
+
+> [!IMPORTANT]
+> **Don't have a SPIRE server yet?**
+> 
+> You need a SPIRE server before connecting to Directory. Choose an option:
+> 
+> **Option 1: Deploy Your Own Directory Instance** (includes SPIRE)
+> - Follow the [Deployment Guide](../README.md) to deploy Directory with SPIRE
+> - Then return here to setup federation
+> 
+> **Option 2: Setup Standalone SPIRE**
+> - Install SPIRE in your environment: https://spiffe.io/docs/latest/spire-installing/
+> - Then continue with federation setup below
+> 
+> **Option 3: Quick Testing Without SPIRE**
+> - Use token-based authentication (see [Token-based Auth](#token-based-directory-client-authentication-dev) section)
+> - Good for prototyping only, not production
 
 ### Prepare Your Environment
 
@@ -80,14 +97,15 @@ Before you begin, ensure you have:
 
 2. **Configure the client**:
    ```bash
-   dirctl config set server-address api.directory.agntcy.org
+   dirctl config set server-address prod.api.ads.outshift.io
    dirctl config set spiffe-socket-path /tmp/spire-agent/public.sock
    ```
 
 3. **Test the connection**:
    ```bash
-   dirctl ping
-   # Expected: ✅ Connected to Directory API at api.directory.agntcy.org
+   dirctl pull bafytest123
+   # Expected: Error: record not found (proves connection works)
+   # If you see connection errors, check SPIRE agent status and network
    ```
 
 #### Option 2: Using Directory Client SDK
@@ -110,7 +128,7 @@ import (
 func main() {
     // Create client with SPIRE support
     config := &client.Config{
-        ServerAddress:     "api.directory.agntcy.org",
+        ServerAddress:     "prod.api.ads.outshift.io",
         SpiffeSocketPath:  "/tmp/spire-agent/public.sock",
     }
     client, _ := client.New(client.WithConfig(config))
@@ -138,7 +156,7 @@ from agntcy.dir_sdk.client import Config, Client
 def main():
     # Create client with SPIRE support
     config = Config(
-        server_address="api.directory.agntcy.org",
+        server_address="prod.api.ads.outshift.io",
         spiffe_socket_path="/tmp/spire-agent/public.sock"
     )
     client = Client(config)
@@ -166,7 +184,7 @@ import {Config, Client} from 'agntcy-dir';
 async function main() {
     // Create client with SPIRE support
     const config = new Config({
-        serverAddress: "api.directory.agntcy.org",
+        serverAddress: "prod.api.ads.outshift.io",
         spiffeEndpointSocket: "/tmp/spire-agent/public.sock",
     });
     const transport = await Client.createGRPCTransport(config);
@@ -193,17 +211,105 @@ main();
 
 To interact with the Directory, you need to establish a trusted federation between your SPIRE server and the Directory SPIRE server.
 
-### Step 1: Prepare Your Federation Request
+Directory supports **two federation profiles** with different infrastructure requirements:
 
-Create a file with your SPIRE server details using the template below:
+| Profile | SSL Passthrough | Bootstrap Bundle | Best For |
+|---------|-----------------|------------------|----------|
+| **https_web** | Not required | Not required | Most organizations, cloud deployments |
+| **https_spiffe** | Required | Required | Air-gapped environments, zero-trust architectures |
 
+**Recommendation**: Start with **https_web** unless you have specific requirements for https_spiffe.
+
+For detailed comparison and technical guidance, see [Federation Profiles Guide](FEDERATION-PROFILES.md).
+
+---
+
+### Understanding Federation Setup
+
+Federation is **bidirectional** and requires **two federation files**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Federation Setup                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  1️⃣ YOUR Federation File (you create & publish)            │
+│     File: your-org.com.yaml                                 │
+│     Contains: How others connect to YOUR SPIRE              │
+│     Action: Submit PR to this repository                    │
+│                                                             │
+│  2️⃣ DIRECTORY Federation File (you download & deploy)      │
+│     File: prod.ads.outshift.io.yaml (already in repo)      │
+│     Contains: How YOUR SPIRE connects to Directory          │
+│     Action: Deploy this to your cluster                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Important:** Both files are required for successful federation!
+
+---
+
+### Step 1: Choose Your Federation Profile
+
+#### Option A: https_web Profile (Recommended)
+
+**Best for**: Standard cloud deployments, organizations without SSL passthrough
+
+**Requirements**:
+- Public DNS for your SPIRE federation endpoint
+- cert-manager with Let's Encrypt (or similar CA)
+- NGINX ingress controller
+
+**Federation file template**:
 ```yaml
-# onboarding/your-org.com.yaml
+# onboarding/federation/your-org.com.yaml
+
+#ClassName for SPIRE Controller Manager resource matching
+className: dir-spire
+
+# Your organization's trust domain
 trustDomain: your-org.com
+
+# Your SPIRE federation endpoint URL
 bundleEndpointURL: https://spire.your-org.com
+
+# Federation profile configuration
+bundleEndpointProfile:
+  type: https_web
+```
+
+**That's it!** No bootstrap bundle exchange needed.
+
+---
+
+#### Option B: https_spiffe Profile
+
+**Best for**: Air-gapped environments, pure SPIFFE deployments
+
+**Requirements**:
+- NGINX ingress controller with SSL passthrough enabled
+- Ability to exchange bootstrap bundles with Directory team
+
+**Federation file template**:
+```yaml
+# onboarding/federation/your-org.com.yaml
+
+# className for SPIRE Controller Manager resource matching
+className: dir-spire
+
+# Your organization's trust domain
+trustDomain: your-org.com
+
+# Your SPIRE federation endpoint URL
+bundleEndpointURL: https://spire.your-org.com
+
+# Federation profile configuration
 bundleEndpointProfile:
   type: https_spiffe
   endpointSPIFFEID: spiffe://your-org.com/spire/server
+
+# Your SPIRE server trust bundle (required for https_spiffe)
 trustDomainBundle: |-
   {
     "keys": [
@@ -218,44 +324,154 @@ trustDomainBundle: |-
   }
 ```
 
-**💡 How to get your trust bundle:**
+**How to get your trust bundle**:
 ```bash
-# Export your SPIRE server trust bundle
-spire-server bundle show -format spiffe > your-trust-bundle.json
+# Extract your SPIRE server trust bundle
+kubectl exec -n your-spire-namespace deployment/spire-server -c spire-server -- \
+  /opt/spire/bin/spire-server bundle show -format spiffe > your-trust-bundle.json
+
+# The output goes into the trustDomainBundle field above
+cat your-trust-bundle.json
 ```
+
+---
+
+### Understanding className
+
+You'll notice both federation templates include a `className` field:
+
+```yaml
+className: dir-spire
+```
+
+**What is className?**
+- A label that tells the SPIRE Controller Manager which resources belong to your SPIRE installation
+- Used to match `ClusterSPIFFEID` and `ClusterFederatedTrustDomain` resources to your SPIRE server
+- Think of it as a "namespace" for SPIRE resources within your cluster
+
+**What value should I use?**
+
+For most users: **Use `dir-spire`** (the standard value)
+
+This value must match in THREE places:
+1. ✅ Your federation file: `className: dir-spire`
+2. ✅ Your SPIRE deployment: `applications/spire/*/values.yaml`
+   ```yaml
+   controllerManager:
+     className: "dir-spire"
+   ```
+3. ✅ Your DIR deployment: `applications/dir/*/values.yaml`
+   ```yaml
+   apiserver:
+     spire:
+       className: dir-spire
+   ```
+
+**⚠️ Important:**
+- If you deployed Directory using this repository's configs, `dir-spire` is already configured
+- If you have a custom SPIRE setup with a different className, use that value instead
+- All three places MUST have the same value for federation to work
+
+**Troubleshooting:**
+- If federation isn't working, verify className matches across all three locations
+- Check SPIRE Controller Manager logs for "no matching className" errors
+
+---
 
 ### Step 2: Submit Federation Request
 
-1. **Fork the repository**: Go to https://github.com/agntcy/dir and click "Fork"
+1. **Fork the repository**: Go to https://github.com/agntcy/dir-staging and click "Fork"
 
 2. **Create your federation file**:
    ```bash
-   git clone https://github.com/your-username/dir.git
-   cd dir/deployment/onboarding/
-   cp spire.template.yaml your-org.com.yaml
+   git clone https://github.com/your-username/dir-staging.git
+   cd dir-staging/onboarding/federation/
+   
+   # Copy the appropriate template based on your chosen profile
+   # For https_web (recommended):
+   cp .federation.web.template.yaml your-org.com.yaml
+   
+   # Or for https_spiffe:
+   cp .federation.spiffe.template.yaml your-org.com.yaml
+   
    # Edit your-org.com.yaml with your details
+   vim your-org.com.yaml
    ```
 
 3. **Submit a Pull Request**:
-   - Title: `federation(<Trust Domain>): add [Your Organization]`
+   - Title: `federation: add <your-org.com>`
    - Description: Brief description of your organization and use case
-   - Files: Include your completed federation configuration
+   - Files: `onboarding/federation/your-org.com.yaml`
+
+---
 
 ### Step 3: Configure Your SPIRE Server
 
-Add the Directory SPIRE server as a federation peer in your SPIRE server configuration
-by obtaining the [Directory trust bundle](spire.directory.yaml).
+After your federation request is approved, configure your SPIRE server to federate with Directory:
 
-Save the trust bundle to the specified path.
+1. **Obtain Directory's federation file**: Download `prod.ads.outshift.io.yaml` from the [federation directory](federation/)
+
+2. **Deploy to your cluster**:
+
+   **Option A: Using this Repository (Recommended)**
+   
+   If you deployed Directory using this repository:
+   
+   ```bash
+   # Generate federation configuration
+   task gen:dir
+   
+   # This creates applications/dir/gen.values.yaml with all federation configs
+   # ArgoCD will automatically sync this to your cluster
+   ```
+   
+   **What `task gen:dir` does:**
+   - Scans `onboarding/federation/*.yaml` files (excluding templates)
+   - Merges them into `applications/dir/gen.values.yaml`
+   - Generates proper YAML structure for SPIRE federation
+   
+   **Option B: Manual Deployment**
+   
+   If you have a custom deployment:
+   
+   ```yaml
+   # Add to your DIR deployment values:
+   apiserver:
+     spire:
+       federation:
+       - className: dir-spire
+         trustDomain: prod.ads.outshift.io
+         bundleEndpointURL: https://prod.spire.ads.outshift.io
+         bundleEndpointProfile:
+           type: https_web
+   ```
+
+3. **Verify federation**:
+   ```bash
+   # Check SPIRE server logs for bundle refresh
+   kubectl logs -n your-spire-namespace -l app.kubernetes.io/name=server -c spire-server | grep "Bundle refreshed"
+   
+   # Expected output:
+   # level=info msg="Bundle refreshed" trust_domain=prod.ads.outshift.io
+   ```
+
+---
 
 ### Step 4: Verify Federation
 
-```bash
-# Check federation status
-spire-server federation list
+Once federation is established, verify connectivity:
 
-# Should show federated trust domain
-spire-server federation show --trustDomain dir.agntcy.org
+```bash
+# Check federation status on your SPIRE server
+kubectl exec -n your-spire-namespace deployment/spire-server -c spire-server -- \
+  /opt/spire/bin/spire-server federation list
+
+# Should show Directory trust domain
+# Trust Domain: prod.ads.outshift.io
+
+# Test Directory API connection
+dirctl pull bafytest123
+# Expected: Error: record not found (proves connection and authentication work)
 ```
 
 ## 📚 Use Cases
@@ -272,7 +488,7 @@ You can find various usage examples at [docs.agntcy.org](https://docs.agntcy.org
 spire-agent api fetch x509-svid
 
 # Verify network connectivity
-curl -v https://api.directory.agntcy.org
+curl -v https://prod.api.ads.outshift.io
 
 # Check client configuration
 dirctl config list
@@ -286,7 +502,7 @@ dirctl config list
 spire-server federation show --trustDomain dir.agntcy.org
 
 # Test bundle endpoint connectivity
-curl https://spire.directory.agntcy.org/
+curl https://prod.spire.ads.outshift.io/
 ```
 
 ### Common Error Messages

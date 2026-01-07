@@ -1,19 +1,31 @@
-# Trust Domain defines the namespace for all SPIFFE IDs
-# in this organization.
+# Federation Configuration Template (https_spiffe profile)
+#
+# This template is for the https_spiffe profile which requires:
+# - SSL passthrough enabled on NGINX ingress controller
+# - Bootstrap bundle exchange with Directory team
+#
+# For most deployments, https_web profile is simpler (no bundle exchange required).
+# See onboarding/README.md for profile comparison and guidance.
+
+# className for SPIRE Controller Manager resource matching
+# Standard value: dir-spire (do not change unless you have custom setup)
+className: dir-spire
+
+# Trust Domain: Your organization's SPIFFE trust domain
 trustDomain: example.com
 
-# Bundle Endpoint defines publicly accessible SPIRE server
-# address for the trust domain.
+# Bundle Endpoint URL: Publicly accessible SPIRE federation endpoint
 bundleEndpointURL: https://spire.example.com
 
-# Bundle Endpoint Profile defines how the data
-# is served by the Bundle Endpoint.
+# Bundle Endpoint Profile: Configuration for https_spiffe
 bundleEndpointProfile:
   type: https_spiffe
+  # SPIFFE ID of your SPIRE server (typically spiffe://<trustDomain>/spire/server)
   endpointSPIFFEID: spiffe://example.com/spire/server
 
-# Trust Domain Bundle defines public keys used to verify SVIDs
-# issued in this trust domain.
+# Trust Domain Bundle: Your SPIRE server's public key bundle (required for https_spiffe)
+# Extract with: kubectl exec -n <namespace> deployment/spire-server -c spire-server -- \
+#   /opt/spire/bin/spire-server bundle show -format spiffe
 trustDomainBundle: |-
   {
     "keys":[
