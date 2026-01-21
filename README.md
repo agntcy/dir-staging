@@ -8,14 +8,16 @@ The manifests are organized into two main sections:
 - `projectapps/`: Contains Argo CD application definitions.
 
 The project will deploy the following components:
-- `applications/dir` - AGNTCY Directory server with storage backend (v0.5.5)
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v0.5.5)
+- `applications/dir` - AGNTCY Directory server with storage backend (v1.0.0)
+- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.0.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
 
-**Latest Version**: v0.5.5 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+**Latest Version**: v1.0.0 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+
+**New in v1.0.0**: 🎉 Production-ready GitHub OAuth authentication via Envoy gateway
 
 ## Getting Started
 
@@ -234,6 +236,121 @@ kubectl port-forward svc/dir-dir-dev-argoapp-apiserver -n dir-dev-dir 8888:8888
 dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 ```
 
+### GitHub OAuth Authentication
+
+> [!NOTE]
+> **Production Ready** (v1.0.0+): GitHub OAuth authentication is now fully integrated
+> into the Directory Helm chart as an optional subchart. No manual builds required!
+
+The Directory server can be deployed with an optional Envoy gateway that provides
+GitHub OAuth authentication, allowing users to access the Directory API using
+their GitHub identity.
+
+#### Features
+
+- ✅ **Device Flow** (default) - No OAuth App registration required
+- ✅ **Web Flow** - Browser-based OAuth for custom apps
+- ✅ **Organization Authorization** - Restrict by GitHub org membership
+- ✅ **User Allow/Deny Lists** - Fine-grained access control
+- ✅ **Token Caching** - Automatic credential management
+- ✅ **CI/CD Support** - Use GitHub PATs for automation
+- ✅ **Helm Integration** - Fully integrated as `envoy-authz` subchart
+
+#### Quick Start
+
+**1. Enable in your deployment values:**
+
+Edit `applications/dir/dev/values.yaml`:
+
+```yaml
+apiserver:
+  # Enable the Envoy auth gateway subchart
+  envoyAuthz:
+    enabled: true
+  
+  # Configure the subchart
+  envoy-authz:
+    envoy:
+      backend:
+        address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
+        port: 8888
+      spiffe:
+        enabled: true
+        trustDomain: example.org
+        className: dir-spire
+    
+    authServer:
+      authorization:
+        # Allow specific GitHub organizations
+        allowedOrgConstructs:
+          - "agntcy"
+        # Or specific users
+        userAllowList:
+          - "github:username"
+    
+    ingress:
+      enabled: true
+      className: "nginx"
+      host: "dev.gateway.example.org"
+      annotations:
+        # Required for gRPC over HTTPS
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+        nginx.ingress.kubernetes.io/grpc-backend: "true"
+```
+
+**2. Deploy** (ArgoCD syncs automatically after git push)
+
+**3. Authenticate:**
+
+```bash
+# Device Flow (recommended - no OAuth App needed)
+export DIRECTORY_CLIENT_SERVER_ADDRESS="dev.gateway.example.org:443"
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+
+# Login - opens browser for GitHub authorization
+dirctl auth login
+
+# Use dirctl normally after login
+dirctl routing list
+```
+
+**For CI/CD:** Use GitHub Personal Access Tokens:
+
+```bash
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+export DIRECTORY_CLIENT_TOKEN="${GITHUB_PAT}"
+dirctl routing list
+```
+
+#### Configuration Options
+
+**Organization-based** (all org members allowed):
+```yaml
+authServer:
+  authorization:
+    allowedOrgConstructs: ["your-org"]
+```
+
+**User allowlist** (specific users only):
+```yaml
+authServer:
+  authorization:
+    userAllowList:
+      - "github:alice"
+      - "github:bob"
+```
+
+**Combined** (org with exclusions):
+```yaml
+authServer:
+  authorization:
+    allowedOrgConstructs: ["your-org"]
+    userDenyList:
+      - "github:suspended-user"
+```
+
+See [Directory Helm Chart documentation](https://github.com/agntcy/dir/tree/main/install/charts/envoy-authz) for advanced configuration.
+
 ## Production Deployment
 
 This example configuration uses simplified settings for local Kind/Minikube testing.
@@ -266,6 +383,7 @@ For production deployment, consider these enhancements:
 | Feature | This Example (Kind) | Production |
 |---------|---------------------|------------|
 | **SPIFFE CSI Driver** | ✅ Enabled (v0.5.5+) | ✅ Enabled |
+| **GitHub OAuth** | ⚠️ Optional | ✅ Recommended |
 | **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
 | **Deployment Strategy** | Recreate (default) | Recreate (required with PVCs) |
 | **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |

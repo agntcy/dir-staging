@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.0 (TBD)
+
+### TODO
+- Copy release notes from Directory v1.0.0 release summary
+- Update component versions
+- Document breaking changes (if any)
+- Add upgrade instructions
+
+---
+
 ## v0.5.5 (2025-12-03)
 
 ### Updated
