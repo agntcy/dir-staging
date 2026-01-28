@@ -35,9 +35,9 @@ apiserver:
   # ============================================================================
 
   # ============================================================================
-  # GITHUB OAUTH AUTHENTICATION (NEW in v1.0.0)
+  # GITHUB OAUTH AUTHENTICATION WITH RBAC (NEW in v1.0.0)
   # ============================================================================
-  # Enable external access to Directory API via GitHub OAuth
+  # Enable external access to Directory API via GitHub OAuth with Casbin RBAC
   # Uncomment to deploy Envoy gateway with GitHub authentication
   # ============================================================================
   
@@ -59,13 +59,40 @@ apiserver:
   #   
   #   authServer:
   #     replicaCount: 1  # Single replica for dev
+  #     
+  #     # Casbin RBAC Configuration (v1.0.0+)
   #     authorization:
-  #       # Dev: Allow all authenticated GitHub users
-  #       allowedOrgConstructs: []
-  #       userAllowList: []
-  #       # For production, restrict to specific org/users:
-  #       # allowedOrgConstructs: ["your-org"]
-  #       # userAllowList: ["github:alice", "github:bob"]
+  #       # Default role for any authenticated GitHub user
+  #       defaultRole: "reader"  # Any authenticated user gets read access
+  #       
+  #       # User deny list (highest priority)
+  #       userDenyList: []
+  #       
+  #       # Role definitions
+  #       # For a complete list of all 24 Directory API methods, see:
+  #       # https://github.com/agntcy/dir/blob/main/install/charts/envoy-authz/values.yaml#L93-L151
+  #       roles:
+  #         # Admin role - full access
+  #         admin:
+  #           allowedMethods:
+  #             - "*"  # Wildcard grants all methods
+  #           users:
+  #             - "github:alice"
+  #             - "github:bob"
+  #           orgs:
+  #             - "your-org"  # All org members get admin access
+  #         
+  #         # Reader role - read-only access
+  #         reader:
+  #           allowedMethods:
+  #             - "/agntcy.dir.store.v1.StoreService/Pull"
+  #             - "/agntcy.dir.store.v1.StoreService/Lookup"
+  #             - "/agntcy.dir.routing.v1.RoutingService/Search"
+  #             - "/agntcy.dir.routing.v1.RoutingService/List"
+  #             - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+  #           users: []
+  #           orgs: []
+  #     
   #     github:
   #       enabled: true
   #       cacheTTL: 5m
@@ -135,12 +162,24 @@ apiserver:
 
     # Authorization settings (handles access control policies)
     # Requires authentication to be enabled first
+    # Uses Casbin policy engine for flexible, policy-driven authorization (v1.0.0+)
     authz:
       # Enable authorization policies
       enabled: true
-      # Trust domain for this Directory server
-      # Used to distinguish internal (same trust domain) vs external requests
-      trust_domain: "example.org"
+      
+      # Path to the authorization policy file
+      enforcer_policy_file_path: "/etc/agntcy/dir/authz_policies.csv"
+      
+      # Casbin authorization policies (CSV format)
+      # Format: p,<subject>,<object>
+      # - subject: SPIFFE trust domain (e.g., example.org) or * for any
+      # - object: gRPC method path or * for all methods
+      enforcer_policy_csv: |
+        p,example.org,*
+        p,*,/agntcy.dir.store.v1.StoreService/Pull
+        p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+        p,*,/agntcy.dir.store.v1.StoreService/Lookup
+        p,*,/agntcy.dir.sync.v1.SyncService/RequestRegistryCredentials
 
     # Rate limiting configuration (NEW in v0.5.0+)
     # Protects against abuse and resource exhaustion

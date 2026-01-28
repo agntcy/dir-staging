@@ -249,9 +249,11 @@ their GitHub identity.
 #### Features
 
 - ✅ **Device Flow** (default) - No OAuth App registration required
-- ✅ **Web Flow** - Browser-based OAuth for custom apps
-- ✅ **Organization Authorization** - Restrict by GitHub org membership
-- ✅ **User Allow/Deny Lists** - Fine-grained access control
+- ✅ **Casbin RBAC** - Policy-driven, role-based authorization
+- ✅ **Multi-Role Support** - Define admin, reader, and custom roles
+- ✅ **Per-Method Permissions** - Fine-grained API access control
+- ✅ **User & Org Roles** - Assign roles to individual users or entire GitHub orgs
+- ✅ **Default Role** - Automatic role for any authenticated user
 - ✅ **Token Caching** - Automatic credential management
 - ✅ **CI/CD Support** - Use GitHub PATs for automation
 - ✅ **Helm Integration** - Fully integrated as `envoy-authz` subchart
@@ -271,6 +273,7 @@ apiserver:
   # Configure the subchart
   envoy-authz:
     envoy:
+      replicaCount: 1  # Increase for production
       backend:
         address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
         port: 8888
@@ -280,13 +283,37 @@ apiserver:
         className: dir-spire
     
     authServer:
+      replicaCount: 1  # Increase for production
+      
+      # Casbin RBAC Configuration
       authorization:
-        # Allow specific GitHub organizations
-        allowedOrgConstructs:
-          - "agntcy"
-        # Or specific users
-        userAllowList:
-          - "github:username"
+        # Default role for any authenticated GitHub user
+        defaultRole: "reader"
+        
+        # Role definitions
+        roles:
+          # Admin role - full access
+          admin:
+            allowedMethods:
+              - "*"  # Wildcard grants all methods
+            users:
+              - "github:alice"
+              - "github:bob"
+            orgs: []
+          
+          # Reader role - read-only access
+          reader:
+            allowedMethods:
+              - "/agntcy.dir.store.v1.StoreService/Pull"
+              - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+              - "/agntcy.dir.routing.v1.RoutingService/List"
+            users: []  # Inherited by defaultRole
+            orgs: []
+      
+      # GitHub provider configuration
+      github:
+        enabled: true
+        cacheTTL: 5m
     
     ingress:
       enabled: true
@@ -314,42 +341,80 @@ dirctl auth login
 dirctl routing list
 ```
 
-**For CI/CD:** Use GitHub Personal Access Tokens:
+**For CI/CD:** Use GitHub Personal Access Tokens or Actions' `GITHUB_TOKEN`:
 
 ```bash
 export DIRECTORY_CLIENT_AUTH_MODE="github"
-export DIRECTORY_CLIENT_TOKEN="${GITHUB_PAT}"
+export DIRECTORY_CLIENT_GITHUB_TOKEN="${GITHUB_PAT}"
+# Or use GitHub Actions' automatic token:
+# export DIRECTORY_CLIENT_GITHUB_TOKEN="${GITHUB_TOKEN}"
+
+# Connect to Envoy gateway
+export DIRECTORY_CLIENT_SERVER_ADDRESS="dev.gateway.example.org:443"
+
 dirctl routing list
 ```
 
+**Note:** For CI/CD, your GitHub user or bot account must be assigned a role (admin or reader) in the RBAC configuration.
+
 #### Configuration Options
 
-**Organization-based** (all org members allowed):
+**Available API Methods:**
+
+For a complete list of all 24 Directory API methods with their full gRPC paths and descriptions, see the [envoy-authz values.yaml reference](https://github.com/agntcy/dir/blob/main/install/charts/envoy-authz/values.yaml#L93-L151).
+
+**User-based roles** (specific users with specific permissions):
 ```yaml
 authServer:
   authorization:
-    allowedOrgConstructs: ["your-org"]
+    defaultRole: ""  # No default role - explicit assignment required
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users:
+          - "github:alice"
+          - "github:bob"
+        orgs: []
 ```
 
-**User allowlist** (specific users only):
+**Organization-based roles** (entire GitHub org gets a role):
 ```yaml
 authServer:
   authorization:
-    userAllowList:
-      - "github:alice"
-      - "github:bob"
+    defaultRole: "reader"  # All authenticated users get reader
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users: []
+        orgs:
+          - "your-org"  # All org members are admins
 ```
 
-**Combined** (org with exclusions):
+**Combined roles** (users override org roles):
 ```yaml
 authServer:
   authorization:
-    allowedOrgConstructs: ["your-org"]
+    defaultRole: "reader"
     userDenyList:
-      - "github:suspended-user"
+      - "github:suspended-user"  # Block specific users
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users:
+          - "github:alice"  # Individual admin
+        orgs:
+          - "your-org"      # Org-wide admin
+      reader:
+        allowedMethods:
+          - "/agntcy.dir.store.v1.StoreService/Pull"
+          - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+        users: []
+        orgs: []
 ```
 
-See [Directory Helm Chart documentation](https://github.com/agntcy/dir/tree/main/install/charts/envoy-authz) for advanced configuration.
+**RBAC Precedence:** Deny > User Role > Org Role > Default Role
+
+See [Directory Helm Chart documentation](https://github.com/agntcy/dir/tree/main/install/charts/envoy-authz) for complete API method list and advanced configuration.
 
 ## Production Deployment
 
@@ -383,7 +448,9 @@ For production deployment, consider these enhancements:
 | Feature | This Example (Kind) | Production |
 |---------|---------------------|------------|
 | **SPIFFE CSI Driver** | ✅ Enabled (v0.5.5+) | ✅ Enabled |
-| **GitHub OAuth** | ⚠️ Optional | ✅ Recommended |
+| **GitHub OAuth + RBAC** | ⚠️ Optional | ✅ Recommended |
+| **Envoy Gateway Replicas** | 1 | 2+ (HA) |
+| **AuthZ Server Replicas** | 1 | 2+ (HA) |
 | **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
 | **Deployment Strategy** | Recreate (default) | Recreate (required with PVCs) |
 | **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |
@@ -396,6 +463,14 @@ For production deployment, consider these enhancements:
 **This configuration is optimized for local testing. For production, enable the optional features documented below.**
 
 ### Key Production Features
+
+**GitHub OAuth with Casbin RBAC** (v1.0.0+):
+- Opt-in via `envoyAuthz.enabled: true`
+- Policy-driven authorization with role-based access control
+- Define roles (admin, reader, custom) with per-method permissions
+- Assign roles to individual users or entire GitHub organizations
+- Default role for any authenticated user
+- High availability with 2+ replicas for Envoy gateway and authz server
 
 **SPIFFE CSI Driver** (v0.5.5+):
 - Enabled by default via `spire.useCSIDriver: true`
