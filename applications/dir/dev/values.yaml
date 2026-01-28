@@ -5,7 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v0.5.5
+    tag: v1.0.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -25,12 +25,96 @@ apiserver:
   # This example uses simple configuration for local Kind/testing.
   # For production deployment, consider enabling:
   #
+  # • GitHub OAuth Authentication - External access via GitHub identity (NEW in v1.0.0)
   # • Persistent Storage (PVCs) - Data persists across restarts
   # • ExternalSecrets - Secure credential management with Vault
   # • Ingress & TLS - External access with certificates
   # • Higher resource limits - Based on expected production load
   #
   # See documentation: https://github.com/agntcy/dir/tree/main/docs/deployment
+  # ============================================================================
+
+  # ============================================================================
+  # GITHUB OAUTH AUTHENTICATION WITH RBAC (NEW in v1.0.0)
+  # ============================================================================
+  # Enable external access to Directory API via GitHub OAuth with Casbin RBAC
+  # Uncomment to deploy Envoy gateway with GitHub authentication
+  # ============================================================================
+  
+  # # Enable the Envoy auth gateway subchart
+  # envoyAuthz:
+  #   enabled: true
+  # 
+  # # Configure the subchart values (note: hyphenated name for subchart config)
+  # envoy-authz:
+  #   envoy:
+  #     replicaCount: 1  # Single replica for dev
+  #     backend:
+  #       address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
+  #       port: 8888
+  #     spiffe:
+  #       enabled: true
+  #       trustDomain: example.org
+  #       className: dir-spire
+  #   
+  #   authServer:
+  #     replicaCount: 1  # Single replica for dev
+  #     
+  #     # Casbin RBAC Configuration (v1.0.0+)
+  #     authorization:
+  #       # Default role for any authenticated GitHub user
+  #       defaultRole: "reader"  # Any authenticated user gets read access
+  #       
+  #       # User deny list (highest priority)
+  #       userDenyList: []
+  #       
+  #       # Role definitions
+  #       # For a complete list of all 24 Directory API methods, see:
+  #       # https://github.com/agntcy/dir/blob/main/install/charts/envoy-authz/values.yaml#L93-L151
+  #       roles:
+  #         # Admin role - full access
+  #         admin:
+  #           allowedMethods:
+  #             - "*"  # Wildcard grants all methods
+  #           users:
+  #             - "github:alice"
+  #             - "github:bob"
+  #           orgs:
+  #             - "your-org"  # All org members get admin access
+  #         
+  #         # Reader role - read-only access
+  #         reader:
+  #           allowedMethods:
+  #             - "/agntcy.dir.store.v1.StoreService/Pull"
+  #             - "/agntcy.dir.store.v1.StoreService/Lookup"
+  #             - "/agntcy.dir.routing.v1.RoutingService/Search"
+  #             - "/agntcy.dir.routing.v1.RoutingService/List"
+  #             - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+  #           users: []
+  #           orgs: []
+  #     
+  #     github:
+  #       enabled: true
+  #       cacheTTL: 5m
+  #       apiTimeout: 10s
+  #   
+  #   # External access via NodePort (Kind cluster)
+  #   # For production, use Ingress with TLS:
+  #   ingress:
+  #     enabled: false
+  #     # For production with Ingress:
+  #     # enabled: true
+  #     # className: "nginx"
+  #     # host: "gateway.example.org"
+  #     # annotations:
+  #     #   cert-manager.io/cluster-issuer: letsencrypt
+  #     #   nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+  #     #   nginx.ingress.kubernetes.io/grpc-backend: "true"
+  #
+  # # After enabling, authenticate with:
+  # #   export DIRECTORY_CLIENT_SERVER_ADDRESS="localhost:30080"  # Or gateway.example.org:443
+  # #   export DIRECTORY_CLIENT_AUTH_MODE="github"
+  # #   dirctl auth login
   # ============================================================================
   
   # Expose the DIR API via NodePort for external access
@@ -78,12 +162,24 @@ apiserver:
 
     # Authorization settings (handles access control policies)
     # Requires authentication to be enabled first
+    # Uses Casbin policy engine for flexible, policy-driven authorization (v1.0.0+)
     authz:
       # Enable authorization policies
       enabled: true
-      # Trust domain for this Directory server
-      # Used to distinguish internal (same trust domain) vs external requests
-      trust_domain: "example.org"
+      
+      # Path to the authorization policy file
+      enforcer_policy_file_path: "/etc/agntcy/dir/authz_policies.csv"
+      
+      # Casbin authorization policies (CSV format)
+      # Format: p,<subject>,<object>
+      # - subject: SPIFFE trust domain (e.g., example.org) or * for any
+      # - object: gRPC method path or * for all methods
+      enforcer_policy_csv: |
+        p,example.org,*
+        p,*,/agntcy.dir.store.v1.StoreService/Pull
+        p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+        p,*,/agntcy.dir.store.v1.StoreService/Lookup
+        p,*,/agntcy.dir.sync.v1.SyncService/RequestRegistryCredentials
 
     # Rate limiting configuration (NEW in v0.5.0+)
     # Protects against abuse and resource exhaustion

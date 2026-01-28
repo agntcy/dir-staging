@@ -8,14 +8,16 @@ The manifests are organized into two main sections:
 - `projectapps/`: Contains Argo CD application definitions.
 
 The project will deploy the following components:
-- `applications/dir` - AGNTCY Directory server with storage backend (v0.5.5)
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v0.5.5)
+- `applications/dir` - AGNTCY Directory server with storage backend (v1.0.0)
+- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.0.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
 
-**Latest Version**: v0.5.5 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+**Latest Version**: v1.0.0 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+
+**New in v1.0.0**: 🎉 Production-ready GitHub OAuth authentication via Envoy gateway
 
 ## Getting Started
 
@@ -234,6 +236,186 @@ kubectl port-forward svc/dir-dir-dev-argoapp-apiserver -n dir-dev-dir 8888:8888
 dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 ```
 
+### GitHub OAuth Authentication
+
+> [!NOTE]
+> **Production Ready** (v1.0.0+): GitHub OAuth authentication is now fully integrated
+> into the Directory Helm chart as an optional subchart. No manual builds required!
+
+The Directory server can be deployed with an optional Envoy gateway that provides
+GitHub OAuth authentication, allowing users to access the Directory API using
+their GitHub identity.
+
+#### Features
+
+- ✅ **Device Flow** (default) - No OAuth App registration required
+- ✅ **Casbin RBAC** - Policy-driven, role-based authorization
+- ✅ **Multi-Role Support** - Define admin, reader, and custom roles
+- ✅ **Per-Method Permissions** - Fine-grained API access control
+- ✅ **User & Org Roles** - Assign roles to individual users or entire GitHub orgs
+- ✅ **Default Role** - Automatic role for any authenticated user
+- ✅ **Token Caching** - Automatic credential management
+- ✅ **CI/CD Support** - Use GitHub PATs for automation
+- ✅ **Helm Integration** - Fully integrated as `envoy-authz` subchart
+
+#### Quick Start
+
+**1. Enable in your deployment values:**
+
+Edit `applications/dir/dev/values.yaml`:
+
+```yaml
+apiserver:
+  # Enable the Envoy auth gateway subchart
+  envoyAuthz:
+    enabled: true
+  
+  # Configure the subchart
+  envoy-authz:
+    envoy:
+      replicaCount: 1  # Increase for production
+      backend:
+        address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
+        port: 8888
+      spiffe:
+        enabled: true
+        trustDomain: example.org
+        className: dir-spire
+    
+    authServer:
+      replicaCount: 1  # Increase for production
+      
+      # Casbin RBAC Configuration
+      authorization:
+        # Default role for any authenticated GitHub user
+        defaultRole: "reader"
+        
+        # Role definitions
+        roles:
+          # Admin role - full access
+          admin:
+            allowedMethods:
+              - "*"  # Wildcard grants all methods
+            users:
+              - "github:alice"
+              - "github:bob"
+            orgs: []
+          
+          # Reader role - read-only access
+          reader:
+            allowedMethods:
+              - "/agntcy.dir.store.v1.StoreService/Pull"
+              - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+              - "/agntcy.dir.routing.v1.RoutingService/List"
+            users: []  # Inherited by defaultRole
+            orgs: []
+      
+      # GitHub provider configuration
+      github:
+        enabled: true
+        cacheTTL: 5m
+    
+    ingress:
+      enabled: true
+      className: "nginx"
+      host: "dev.gateway.example.org"
+      annotations:
+        # Required for gRPC over HTTPS
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+        nginx.ingress.kubernetes.io/grpc-backend: "true"
+```
+
+**2. Deploy** (ArgoCD syncs automatically after git push)
+
+**3. Authenticate:**
+
+```bash
+# Device Flow (recommended - no OAuth App needed)
+export DIRECTORY_CLIENT_SERVER_ADDRESS="dev.gateway.example.org:443"
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+
+# Login - opens browser for GitHub authorization
+dirctl auth login
+
+# Use dirctl normally after login
+dirctl routing list
+```
+
+**For CI/CD:** Use GitHub Personal Access Tokens or Actions' `GITHUB_TOKEN`:
+
+```bash
+export DIRECTORY_CLIENT_AUTH_MODE="github"
+export DIRECTORY_CLIENT_GITHUB_TOKEN="${GITHUB_PAT}"
+# Or use GitHub Actions' automatic token:
+# export DIRECTORY_CLIENT_GITHUB_TOKEN="${GITHUB_TOKEN}"
+
+# Connect to Envoy gateway
+export DIRECTORY_CLIENT_SERVER_ADDRESS="dev.gateway.example.org:443"
+
+dirctl routing list
+```
+
+**Note:** For CI/CD, your GitHub user or bot account must be assigned a role (admin or reader) in the RBAC configuration.
+
+#### Configuration Options
+
+**Available API Methods:**
+
+For a complete list of all 24 Directory API methods with their full gRPC paths and descriptions, see the [envoy-authz values.yaml reference](https://github.com/agntcy/dir/blob/main/install/charts/envoy-authz/values.yaml#L93-L151).
+
+**User-based roles** (specific users with specific permissions):
+```yaml
+authServer:
+  authorization:
+    defaultRole: ""  # No default role - explicit assignment required
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users:
+          - "github:alice"
+          - "github:bob"
+        orgs: []
+```
+
+**Organization-based roles** (entire GitHub org gets a role):
+```yaml
+authServer:
+  authorization:
+    defaultRole: "reader"  # All authenticated users get reader
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users: []
+        orgs:
+          - "your-org"  # All org members are admins
+```
+
+**Combined roles** (users override org roles):
+```yaml
+authServer:
+  authorization:
+    defaultRole: "reader"
+    userDenyList:
+      - "github:suspended-user"  # Block specific users
+    roles:
+      admin:
+        allowedMethods: ["*"]
+        users:
+          - "github:alice"  # Individual admin
+        orgs:
+          - "your-org"      # Org-wide admin
+      reader:
+        allowedMethods:
+          - "/agntcy.dir.store.v1.StoreService/Pull"
+          - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+        users: []
+        orgs: []
+```
+
+**RBAC Precedence:** Deny > User Role > Org Role > Default Role
+
+See [Directory Helm Chart documentation](https://github.com/agntcy/dir/tree/main/install/charts/envoy-authz) for complete API method list and advanced configuration.
+
 ## Production Deployment
 
 This example configuration uses simplified settings for local Kind/Minikube testing.
@@ -266,6 +448,9 @@ For production deployment, consider these enhancements:
 | Feature | This Example (Kind) | Production |
 |---------|---------------------|------------|
 | **SPIFFE CSI Driver** | ✅ Enabled (v0.5.5+) | ✅ Enabled |
+| **GitHub OAuth + RBAC** | ⚠️ Optional | ✅ Recommended |
+| **Envoy Gateway Replicas** | 1 | 2+ (HA) |
+| **AuthZ Server Replicas** | 1 | 2+ (HA) |
 | **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
 | **Deployment Strategy** | Recreate (default) | Recreate (required with PVCs) |
 | **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |
@@ -278,6 +463,14 @@ For production deployment, consider these enhancements:
 **This configuration is optimized for local testing. For production, enable the optional features documented below.**
 
 ### Key Production Features
+
+**GitHub OAuth with Casbin RBAC** (v1.0.0+):
+- Opt-in via `envoyAuthz.enabled: true`
+- Policy-driven authorization with role-based access control
+- Define roles (admin, reader, custom) with per-method permissions
+- Assign roles to individual users or entire GitHub organizations
+- Default role for any authenticated user
+- High availability with 2+ replicas for Envoy gateway and authz server
 
 **SPIFFE CSI Driver** (v0.5.5+):
 - Enabled by default via `spire.useCSIDriver: true`

@@ -10,7 +10,7 @@ global:
 # Image config
 image:
   repository: ghcr.io/agntcy/dir-ctl
-  tag: v0.5.5
+  tag: v1.0.0
   pullPolicy: IfNotPresent
   pullSecrets: []
 
