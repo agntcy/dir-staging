@@ -8,14 +8,14 @@ The manifests are organized into two main sections:
 - `projectapps/`: Contains Argo CD application definitions.
 
 The project will deploy the following components:
-- `applications/dir` - AGNTCY Directory server with storage backend (v0.5.5)
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v0.5.5)
+- `applications/dir` - AGNTCY Directory server with storage backend (v1.0.0)
+- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.0.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
 
-**Latest Version**: v0.5.5 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+**Latest Version**: v1.0.0 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
 
 ## Getting Started
 
@@ -265,7 +265,7 @@ For production deployment, consider these enhancements:
 
 | Feature | This Example (Kind) | Production |
 |---------|---------------------|------------|
-| **SPIFFE CSI Driver** | ✅ Enabled (v0.5.5+) | ✅ Enabled |
+| **SPIFFE CSI Driver** | ✅ Enabled (v1.0.0+) | ✅ Enabled |
 | **Storage** | emptyDir (ephemeral) | PVCs (persistent) |
 | **Deployment Strategy** | Recreate (default) | Recreate (required with PVCs) |
 | **Credentials** | Hardcoded in values.yaml | ExternalSecrets + Vault |
@@ -279,7 +279,7 @@ For production deployment, consider these enhancements:
 
 ### Key Production Features
 
-**SPIFFE CSI Driver** (v0.5.5+):
+**SPIFFE CSI Driver** (v1.0.0+):
 - Enabled by default via `spire.useCSIDriver: true`
 - Provides synchronous workload identity injection
 - Eliminates authentication race conditions ("certificate contains no URI SAN" errors)
