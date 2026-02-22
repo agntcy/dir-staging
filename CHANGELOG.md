@@ -6,9 +6,6 @@
 - Bump DIR components to v1.0.0 (from v0.5.5)
 - Bump Helm chart versions to v1.0.0 (from v0.6.0)
 
-### Reference
-- Aligned with agntcy-deployment dev config
-
 ---
 
 ## v0.5.5 (2025-12-03)
