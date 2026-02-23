@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.0 (2026-02-22)
+
+### Updated
+- Bump DIR components to v1.0.0 (from v0.5.5)
+- Bump Helm chart versions to v1.0.0 (from v0.6.0)
+
+---
+
 ## v0.5.5 (2025-12-03)
 
 ### Updated

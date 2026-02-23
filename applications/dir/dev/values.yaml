@@ -5,20 +5,14 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v0.5.5
+    tag: v1.0.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
-  # Resource limits for local Kind deployment
-  # For production, increase based on expected load (e.g., 500m CPU, 1Gi RAM requests)
-  resources:
-    requests:
-      cpu: 250m          # Modest for local testing
-      memory: 512Mi
-    limits:
-      cpu: 1000m         # Allow bursts
-      memory: 2Gi
-  
+  # Resources: use chart default (empty) for Kind - allows flexible scheduling
+  # Chart recommends not specifying resources for dev/minikube environments
+  resources: {}
+
   # ============================================================================
   # OPTIONAL PRODUCTION FEATURES (Not configured in this example)
   # ============================================================================
@@ -37,6 +31,10 @@ apiserver:
   service:
     type: NodePort
 
+  # Prometheus metrics (disabled for minimal example; no Prometheus observability)
+  metrics:
+    enabled: false
+
   # Expose the P2P API via NodePort for external access
   routingService:
     type: NodePort
@@ -45,21 +43,31 @@ apiserver:
     externalTrafficPolicy: Local
 
   # SPIRE configuration
-  # Chart v0.5.3+ defaults to SPIFFE CSI driver for reliable identity injection
+  # Chart defaults to SPIFFE CSI driver (spire.useCSIDriver: true)
+  # Ensures synchronous workload registration and eliminates authentication delays
   spire:
     enabled: true
     className: dir-spire
     trustDomain: example.org
-    useCSIDriver: true  # Eliminates "certificate contains no URI SAN" auth failures
+    useCSIDriver: true  # Use SPIFFE CSI driver for reliable identity injection (default, explicit for clarity)
+    
+    # SPIRE controller className for ClusterSPIFFEID matching
+    # REQUIRED: The className field is mandatory for ClusterSPIFFEID resources.
+    # The SPIRE controller manager uses className to match ClusterSPIFFEID resources
+    # with the appropriate SPIRE installation. Without this field, the controller
+    # will ignore the ClusterSPIFFEID and no workload registration will occur.
+    # See: https://github.com/spiffe/spire-controller-manager/blob/main/docs/clusterspiffeid-crd.md
 
   # API server configuration
   config:
     listen_address: "0.0.0.0:8888"
 
-    # OASF API validation configuration (NEW in v0.5.5)
-    # Lax mode allows validation warnings (non-standard modules) but rejects actual errors
-    # Set to true for strict validation that rejects all warnings
-    oasf_api_validation_strict_mode: false
+    # OASF validation configuration (REFACTORED in v0.5.6)
+    # Nested structure for better organization
+    oasf_api_validation:
+      disable: true            # Use embedded schemas (faster, no network dependency)
+      # schema_url: Not used when disabled
+      # strict_mode: Not used when disabled (embedded validation uses fixed behavior)
 
     # Authentication settings (handles identity verification)
     # Supports both X.509 (X.509-SVID) and JWT (JWT-SVID) authentication
@@ -78,17 +86,16 @@ apiserver:
 
     # Authorization settings (handles access control policies)
     # Requires authentication to be enabled first
+    # Uses Casbin policy engine for flexible, policy-driven authorization
     authz:
-      # Enable authorization policies
       enabled: true
-      # Trust domain for this Directory server
-      # Used to distinguish internal (same trust domain) vs external requests
-      trust_domain: "example.org"
+      # Path to the authorization policy file
+      enforcer_policy_file_path: "/etc/agntcy/dir/authz_policies.csv"
 
-    # Rate limiting configuration (NEW in v0.5.0+)
+    # Rate limiting configuration
     # Protects against abuse and resource exhaustion
     ratelimit:
-      enabled: true
+      enabled: false  # Minimal example; no need for rate limiting
       global_rps: 50         # Requests per second (modest for Kind)
       global_burst: 100      # Burst capacity
       per_client_rps: 100    # Per authenticated client
@@ -109,13 +116,15 @@ apiserver:
         # cache_dir: ""
 
         # Registry address to connect to
+        # For Kind: local Zot service in cluster
+        # For production: external address shared via RequestRegistryCredentials RPC
         registry_address: "dir-dir-dev-argoapp-zot.dir-dev-dir.svc.cluster.local:5000"
         
         # All data will be stored under this repo.
         # Objects are pushed as tags, manifests, and blobs.
         # repository_name: ""
 
-        # Auth credentials to use.
+        # Auth credentials (inline for Kind; use ExternalSecret for production)
         auth_config:
           insecure: "true"
           username: "admin"
@@ -126,19 +135,20 @@ apiserver:
       # Address to use for routing
       listen_address: "/ip4/0.0.0.0/tcp/5555"
 
-      # Path to private key file for peer ID.
-      # TODO: generate and mount via secret
+      # Path to private key file for peer ID
+      # Provides stable peer identity across pod restarts
+      # TODO: generate and mount via secret for Kind
       # key_path: /etc/routing/node.privkey
 
       # Path to the routing datastore
       datastore_dir: /etc/routing/datastore
 
       # Address of the Directory API server for sync operations
+      # For Kind: internal cluster address
       directory_api_address: dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local:8888
 
-      # Nodes to use for bootstrapping of the DHT.
-      # We read initial routing tables here and get introduced
-      # to the network.
+      # Nodes to use for bootstrapping of the DHT
+      # For single-node Kind: can be left empty
       # bootstrap_peers:
       #   - /ip4/1.1.1.1/tcp/1
       #   - /ip4/1.1.1.1/tcp/2
@@ -146,25 +156,13 @@ apiserver:
       # GossipSub configuration for efficient label announcements
       # When enabled, labels are propagated via GossipSub mesh to ALL subscribed peers
       # When disabled, falls back to DHT+Pull mechanism (higher bandwidth, limited reach)
-      # Default: true (recommended for production)
       gossipsub:
-        enabled: true
+        enabled: false  # Single-node Kind; no peers to gossip with
 
     # Sync configuration
+    # Only used for RequestRegistryCredentials RPC (provides registry auth to remote nodes)
+    # For Kind: inline credentials; production uses reconciler's regsync + ExternalSecret
     sync:
-      # How frequently the scheduler checks for pending syncs
-      scheduler_interval: "30s"
-      
-      # Maximum number of sync workers running concurrently
-      worker_count: 1
-      
-      # Timeout for individual sync operations
-      worker_timeout: "10m"
-      
-      # Registry monitor configuration
-      registry_monitor:
-        check_interval: "30s"
-      
       # Authentication configuration for sync operations
       auth_config:
         username: "user"
@@ -174,62 +172,68 @@ apiserver:
     publication:
       # How frequently the scheduler checks for pending publications
       scheduler_interval: "1h"
-      
-      # Maximum number of publication workers running concurrently
-      worker_count: 1
+      worker_count: 0  # Minimal example; no P2P peers to publish to
       
       # Timeout for individual publication operations
       worker_timeout: "30m"
 
-  # Database configuration (NEW in v0.5.2)
-  # This example uses default /tmp/dir.db (ephemeral)
-  # For production persistence, uncomment and enable PVC below:
-  #
-  # database:
-  #   type: "sqlite"
-  #   sqlite:
-  #     dbPath: "/var/lib/dir/database/dir.db"  # Path on PVC
-  #   pvc:
-  #     enabled: true
-  #     create: true
-  #     storageClassName: "your-storage-class"
-  #     size: 1Gi  # Database size (search index, sync state, publication queue)
-  #     accessMode: ReadWriteOnce
-  #
-  # Benefits: Database persists across restarts, faster recovery, enables readOnlyRootFilesystem
-  
-  # Deployment strategy (NEW in v0.5.2)
-  # Default: Recreate (prevents database lock conflicts during updates)
-  # This is the chart default - explicit here for documentation
-  #
-  # IMPORTANT: When using PVCs (routing or database), Recreate strategy is REQUIRED
-  # to prevent BadgerDB/SQLite lock conflicts during rolling updates.
-  # With emptyDir (this example), RollingUpdate would work but Recreate is safer.
-  #
-  # strategy:
-  #   type: Recreate  # Terminates old pod before starting new one
-  #
-  # Trade-off: Brief downtime (10-15 seconds) during updates for clean deployments
+    # Database configuration (PostgreSQL)
+    # Connection settings for the apiserver database
+    # Credentials from postgresql.auth (inline for Kind; use ExternalSecret for production)
+    database:
+      # Database type (only postgres is supported)
+      type: "postgres"
+      postgres:
+        # PostgreSQL host address - leave empty; chart auto-derives from postgresql subchart
+        host: ""
+        port: 5432
+        database: "dir"
+        ssl_mode: "disable"
 
-  # Pod Security Standards (NEW in v0.5.2 example)
-  # Enhanced security for production-grade deployments
+  # Casbin authorization policies (top-level, not in config)
+  # Format: p,<subject>,<object>
+  # - subject: SPIFFE trust domain (e.g., example.org) or * for any
+  # - object: gRPC method path or * for all methods
+  authz_policies_csv: |
+    p,example.org,*
+    p,*,/agntcy.dir.store.v1.StoreService/Pull
+    p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+    p,*,/agntcy.dir.store.v1.StoreService/Lookup
+    p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
+
+  # PostgreSQL subchart configuration
+  # Deploys PostgreSQL alongside the apiserver
+  # Credentials from auth.* (inline for Kind; use existingSecret + ExternalSecret for production)
+  postgresql:
+    enabled: true
+    auth:
+      username: "dir"
+      password: "dir"
+      database: "dir"
+
+  # Deployment strategy
+  # Use Recreate to prevent lock conflicts during updates
+  # BadgerDB (routing) uses exclusive file locks; RollingUpdate would cause pod crash
+  strategy:
+    type: Recreate
+
+  # Pod security context - allows non-root user (65532) to write to volumes
+  # Enhanced security following Pod Security Standards
   podSecurityContext:
-    fsGroup: 65532            # Allows non-root user to write to volumes
+    fsGroup: 65532            # Match the user ID from Dockerfile (distroless nonroot)
     runAsNonRoot: true        # Enforce non-root execution
-    runAsUser: 65532          # Explicit user ID (matches Dockerfile)
-    seccompProfile:           # Syscall filtering
+    runAsUser: 65532          # Explicit user ID
+    seccompProfile:           # Apply seccomp for syscall filtering
       type: RuntimeDefault
 
-  # Container security context
+  # Container security context - restrictive permissions
   securityContext:
     allowPrivilegeEscalation: false  # Prevent privilege escalation
     runAsNonRoot: true               # Enforce non-root at container level
-    runAsUser: 65532                 # Explicit UID
+    runAsUser: 65532                 # Explicit UID (matches Dockerfile)
     capabilities:
       drop:
-        - ALL                        # Drop all capabilities (least privilege)
-    # Note: readOnlyRootFilesystem not enabled with emptyDir storage
-    # For production with PVCs, enable this for maximum security
+        - ALL                        # Drop all capabilities (principle of least privilege)
 
   # Extra volume mounts for the apiserver container
   extraVolumeMounts: 
@@ -251,19 +255,13 @@ apiserver:
 
   # Zot registry configuration (subchart)
   zot:
-    # Resource limits for Zot registry
-    resources:
-      requests:
-        cpu: 100m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 1Gi
-    
+    # Resources: use chart default for Kind (allows flexible scheduling)
+    resources: {}
+
     extraVolumeMounts: []
     extraVolumes: []
     
-    # ZOT secrets
+    # ZOT secrets (inline htpasswd for Kind)
     mountSecret: true
     authHeader: "admin:admin"
     secretFiles:
@@ -272,7 +270,7 @@ apiserver:
         admin:$2y$05$vmiurPmJvHylk78HHFWuruFFVePlit9rZWGA/FbZfTEmNRneGJtha
         user:$2y$05$L86zqQDfH5y445dcMlwu6uHv.oXFgT6AiJCwpv3ehr7idc0rI3S2G
   
-    # Zot config
+    # Zot config (static ConfigMap for Kind)
     mountConfig: true
     configFiles:
       config.json: |-
