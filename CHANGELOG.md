@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Root README: Point to docs.agntcy.org for deployment; remove duplicated Quick Start and Production sections
+- onboarding/README.md: Restructure for clarity (What You'll Do, prerequisites, Step 1–3 flow); use dirctl flags instead of config
+
+### Removed
+- `onboarding/FEDERATION-PROFILES.md` (content moved to docs; reference in onboarding/README.md)
+
+### Updated
+- Federation templates: Comment now points to https://docs.agntcy.org/dir/federation-profiles/
+
+---
+
 ## v1.0.0 (2026-02-22)
 
 ### Updated

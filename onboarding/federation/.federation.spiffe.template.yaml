@@ -5,7 +5,7 @@
 # - Bootstrap bundle exchange with Directory team
 #
 # For most deployments, https_web profile is simpler (no bundle exchange required).
-# See onboarding/README.md for profile comparison and guidance.
+# See https://docs.agntcy.org/dir/federation-profiles/ for profile comparison.
 
 # className for SPIRE Controller Manager resource matching
 # Standard value: dir-spire (do not change unless you have custom setup)

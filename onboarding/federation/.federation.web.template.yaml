@@ -6,7 +6,7 @@
 # - NGINX ingress controller (standard configuration, no SSL passthrough needed)
 #
 # This is the recommended profile for most deployments.
-# See onboarding/README.md for profile comparison and guidance.
+# See https://docs.agntcy.org/dir/federation-profiles/ for profile comparison.
 
 # className for SPIRE Controller Manager resource matching
 # Standard value: dir-spire (do not change unless you have custom setup)
