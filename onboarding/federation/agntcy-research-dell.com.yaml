@@ -1,0 +1,6 @@
+# dir-staging/onboarding/federation/agntcy-research-dell.com.yaml
+className: dir-spire
+trustDomain: agntcy-research-dell.com
+bundleEndpointURL: https://spire.agntcy-research-dell.com
+bundleEndpointProfile:
+  type: https_web
