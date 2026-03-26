@@ -201,11 +201,18 @@ apiserver:
     p,*,/agntcy.dir.store.v1.StoreService/Lookup
     p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
 
+  # Reconciler configuration
+  reconciler:
+    image:
+      tag: v1.0.0
+
   # PostgreSQL subchart configuration
   # Deploys PostgreSQL alongside the apiserver
   # Credentials from auth.* (inline for Kind; use existingSecret + ExternalSecret for production)
   postgresql:
     enabled: true
+    image:
+      tag: "latest@sha256:621359194c6a0f0fd502c1996f40f539c3e5f2da43401b6d52ee5614722b7cba"
     auth:
       username: "dir"
       password: "dir"
