@@ -3,10 +3,42 @@
 
 version: '3'
 
+vars:
+  VULN_SCAN_CHARTS:
+    - applications/dir/dev
+    - applications/spire/dev
+
 tasks:
   default:
     cmds:
       - task -l
+
+  deps:vuln:chart:images:
+    desc: List container images from a Helm chart directory containing config.json
+    requires:
+      vars: [CHART_DIR]
+    cmd: |
+      CHART_REPO=$(jq -r .chart_repo "{{.CHART_DIR}}/config.json")
+      CHART_NAME=$(jq -r .chart_name "{{.CHART_DIR}}/config.json")
+      CHART_VERSION=$(jq -r .chart_version "{{.CHART_DIR}}/config.json")
+      VALUES_FLAG=""
+      [ -f "{{.CHART_DIR}}/values.yaml" ] && VALUES_FLAG="-f {{.CHART_DIR}}/values.yaml"
+      if [[ "$CHART_REPO" == https://* ]]; then
+        REPO_ALIAS=$(echo "$CHART_NAME" | tr '/' '-')
+        helm repo add "$REPO_ALIAS" "$CHART_REPO" --force-update >/dev/null 2>&1
+        helm template release "$REPO_ALIAS/$CHART_NAME" \
+          --version "$CHART_VERSION" $VALUES_FLAG 2>/dev/null
+      else
+        helm template release "oci://$CHART_REPO/$CHART_NAME" \
+          --version "$CHART_VERSION" $VALUES_FLAG 2>/dev/null
+      fi | grep '^\s*image:' | awk '{print $2}' | tr -d '"'
+
+  deps:vuln:images:list:
+    desc: Output deduplicated vulnerability-scan image refs (one per line) for CI matrix
+    cmd: |
+      for chart in {{.VULN_SCAN_CHARTS | join " "}}; do
+        task deps:vuln:chart:images CHART_DIR="{{.ROOT_DIR}}/$chart" 2>/dev/null
+      done | sort -u
 
   gen:
     desc: Generate application manifests
