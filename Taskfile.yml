@@ -40,6 +40,23 @@ tasks:
         task deps:vuln:chart:images CHART_DIR="{{.ROOT_DIR}}/$chart" 2>/dev/null
       done | sort -u
 
+  deps:vuln:images:
+    desc: Run vulnerability scan on container images resolved from Helm charts
+    preconditions:
+      - sh: command -v trivy
+        msg: trivy is required – install it from https://aquasecurity.github.io/trivy
+    cmd: |
+      trivy clean --scan-cache
+      IMAGES=$(task --silent deps:vuln:images:list)
+      if [ -z "$IMAGES" ]; then
+        echo "No images found to scan."
+        exit 0
+      fi
+      echo "$IMAGES" | while IFS= read -r image; do
+        echo "Scanning $image..."
+        trivy image --scanners vuln --severity CRITICAL,HIGH,MEDIUM --ignore-unfixed "$image"
+      done
+
   gen:
     desc: Generate application manifests
     cmds:
