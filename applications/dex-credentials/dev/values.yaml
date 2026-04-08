@@ -1,0 +1,37 @@
+# Dex credentials via ExternalSecret
+# Deployed at syncWave "0" before Dex (syncWave "1")
+# Uses dysnix/raw chart to deploy raw K8s manifests via Helm
+#
+# ============================================================================
+# DEPLOYMENT NOTES
+# ============================================================================
+# • Replace secretStoreRef.name with your ClusterSecretStore / SecretStore name.
+# • Replace remoteRef.key / property with the paths to your GitHub OAuth
+#   client ID and client secret in your secrets backend (Vault, AWS SM, etc.).
+# • The produced Kubernetes Secret (dex-github-credentials) is consumed by the
+#   Dex chart via envVars secretKeyRef.
+# ============================================================================
+
+resources:
+  - apiVersion: external-secrets.io/v1beta1
+    kind: ExternalSecret
+    metadata:
+      name: dex-github-credentials
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: my-cluster-secret-store      # Replace with your ClusterSecretStore name
+        kind: ClusterSecretStore
+      target:
+        name: dex-github-credentials
+        creationPolicy: Owner
+        deletionPolicy: Retain
+      data:
+        - secretKey: clientID
+          remoteRef:
+            key: path/to/credentials       # Replace with your secret path
+            property: github-client-id      # Replace with your property name
+        - secretKey: clientSecret
+          remoteRef:
+            key: path/to/credentials        # Replace with your secret path
+            property: github-client-secret   # Replace with your property name
