@@ -8,7 +8,6 @@ The manifests are organized into two main sections:
 
 The project will deploy the following components:
 - `applications/dir` - AGNTCY Directory server with storage backend (v1.2.0)
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.2.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
