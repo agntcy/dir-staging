@@ -7,14 +7,14 @@ The manifests are organized into two main sections:
 - `projectapps/`: Contains Argo CD application definitions.
 
 The project will deploy the following components:
-- `applications/dir` - AGNTCY Directory server with storage backend (v1.0.0)
-- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.0.0)
+- `applications/dir` - AGNTCY Directory server with storage backend (v1.2.0)
+- `applications/dir-admin` - AGNTCY Directory Admin CLI client (v1.2.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
 provided as-is for demonstration and testing purposes.
 
-**Latest Version**: v1.0.0 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
+**Latest Version**: v1.2.0 - See [CHANGELOG.md](CHANGELOG.md) for what's new.
 
 ## Getting Started
 
@@ -49,6 +49,58 @@ Choose your path based on your goal:
 **Next Steps:**
 1. Deploy your Directory instance (see [Getting Started](https://docs.agntcy.org/dir/getting-started/))
 2. Setup federation (see [Client Onboarding Guide](onboarding/README.md) after deployment)
+
+---
+
+## Optional OIDC Authentication Add-On
+
+The default Directory deployment in this repository uses SPIFFE/SPIRE-oriented authentication that works well for in-cluster workloads. If you also want to support `dirctl`, SDKs, or automation running **outside** the cluster, enable the optional OIDC add-on in `applications/dir/dev/values.yaml`.
+
+This add-on puts an Envoy gateway in front of Directory:
+
+1. A remote client gets an OIDC token from your identity provider.
+2. Envoy validates the JWT using the configured issuer and JWKS settings.
+3. The ext-authz service maps token claims to roles and allowed gRPC methods.
+4. Only authorized requests are forwarded to the internal Directory apiserver.
+
+### When to Use It
+
+Use the OIDC add-on when:
+
+- You want remote `dirctl` access from a laptop or workstation outside the cluster
+- You want a human login flow backed by Dex
+- You want GitHub Actions or other external automation to call Directory with OIDC tokens
+
+Keep it disabled if you only need in-cluster, SPIFFE-based access.
+
+### What to Configure
+
+The staging example now includes a fully commented, opt-in OIDC block in `applications/dir/dev/values.yaml`. The main settings are:
+
+- `apiserver.envoyAuthz.enabled`: installs the optional Envoy/ext-authz add-on
+- `apiserver.envoy-authz.envoy.backend.*`: points Envoy at the internal Directory service
+- `apiserver.envoy-authz.envoy.oidc.dex.*`: configures Dex as the human/user OIDC issuer
+- `apiserver.envoy-authz.envoy.oidc.github.*`: configures GitHub Actions OIDC for automation
+- `apiserver.envoy-authz.authServer.oidc.issuers`: maps issuers to principal types such as `user` or `github`
+- `apiserver.envoy-authz.authServer.oidc.roles`: maps users, clients, or workflows to allowed gRPC methods
+- `apiserver.envoy-authz.ingress.*`: exposes the Envoy gateway for external access over gRPC
+
+### Dex and Remote Clients
+
+If you want interactive user login, configure Dex in `applications/dex/dev/values.yaml` and make sure:
+
+- `config.issuer` matches the public URL where Dex is reachable
+- your GitHub OAuth app credentials are supplied through a Kubernetes Secret
+- the Dex issuer values in `applications/dex/dev/values.yaml` and `applications/dir/dev/values.yaml` match
+
+Enabling Dex by itself is not enough for remote Directory access. Remote clients also need the Envoy/ext-authz add-on enabled so their OIDC tokens can be validated before requests reach Directory.
+
+### Canonical Field Reference
+
+The staging values file is a user-facing example. For the complete public source of truth for all supported fields, see:
+
+- `agntcy/dir/install/charts/dir/apiserver/values.yaml`
+- `agntcy/dir/install/charts/envoy-authz/values.yaml`
 
 ---
 

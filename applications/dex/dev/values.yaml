@@ -17,6 +17,10 @@ replicaCount: 1
 
 config:
   # Public URL where Dex is exposed (must match ingress/DNS)
+  # Keep this value aligned with:
+  # - connectors[].config.redirectURI (same hostname + /callback)
+  # - applications/dir/dev/values.yaml -> apiserver.envoy-authz.envoy.oidc.dex.issuer
+  # - applications/dir/dev/values.yaml -> apiserver.envoy-authz.authServer.oidc.issuers[].provider
   issuer: https://dex.example.com
 
   storage:
@@ -31,15 +35,21 @@ config:
       config:
         clientID: $GITHUB_CLIENT_ID
         clientSecret: $GITHUB_CLIENT_SECRET
+        # This callback must use the same public Dex hostname as config.issuer.
         redirectURI: https://dex.example.com/callback
         useLoginAsID: true
 
   staticClients:
     - id: dirctl
       name: Directory CLI
+      # Public client for browser/device login flows from developer machines.
+      # The CLI is expected to obtain a Dex token first, then call the Directory
+      # OIDC gateway exposed by applications/dir/dev/values.yaml.
       public: true
       redirectURIs:
+        # Local browser callback used by interactive login flows.
         - http://localhost:8484/callback
+        # Device flow callback expected by Dex when oauth2.deviceRequests is enabled.
         - /device/callback
 
   expiry:
@@ -49,9 +59,12 @@ config:
   oauth2:
     skipApprovalScreen: true
     deviceRequests:
+      # Recommended for remote dirctl usage because the CLI may run outside the cluster.
       enabled: true
 
-# GitHub OAuth credentials injected from a Kubernetes Secret
+# GitHub OAuth credentials injected from a Kubernetes Secret.
+# In this repo the matching secret manifest is configured in:
+# - applications/dex-credentials/dev/values.yaml
 envVars:
   - name: GITHUB_CLIENT_ID
     valueFrom:
