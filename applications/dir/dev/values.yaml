@@ -5,7 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v1.1.0
+    tag: v1.2.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -204,7 +204,228 @@ apiserver:
   # Reconciler configuration
   reconciler:
     image:
-      tag: v1.1.0
+      tag: v1.2.0
+
+  # ============================================================================
+  # OPTIONAL OIDC AUTHENTICATION ADD-ON (Envoy + ext-authz)
+  # ============================================================================
+  # This add-on solves the common "remote dirctl" problem for users running the
+  # CLI or SDKs outside the cluster. Instead of exposing the Directory API
+  # directly, you place Envoy in front of it:
+  #
+  #   remote client -> OIDC provider -> Envoy jwt_authn -> ext-authz -> Directory
+  #
+  # Use this add-on when you want:
+  # - browser or CLI login through Dex-issued OIDC tokens
+  # - GitHub Actions access through GitHub OIDC tokens
+  # - claim-based role mapping before the request reaches Directory
+  #
+  # Keep this section disabled by default. The existing x509/SPIFFE-based
+  # apiserver authentication still applies to in-cluster and workload traffic.
+  # When enabled, Envoy validates user or workflow JWTs, and ext-authz maps
+  # claims to roles and allowed gRPC methods.
+  # ============================================================================
+  envoyAuthz:
+    enabled: false
+
+  envoy-authz:
+    envoy:
+      # Run more than one Envoy replica for public or shared environments.
+      replicaCount: 2
+
+      # Requests first terminate at Envoy, then Envoy forwards only authorized
+      # gRPC calls to the internal Directory apiserver Service.
+      # This must stay on the internal Kubernetes Service DNS name, not the
+      # public gateway hostname exposed through ingress.
+      backend:
+        address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
+        port: 8888
+        timeout: 30s
+
+      # JWT validation at the edge. Enable only the providers you actually use.
+      oidc:
+        dex:
+          # Enable this when you deploy Dex for human or device-flow logins.
+          # Keep these values aligned with applications/dex/dev/values.yaml.
+          enabled: true
+          # Must match dex.config.issuer.
+          issuer: "https://dex.example.com"
+          # Dex publishes signing keys at /keys.
+          jwksUri: "https://dex.example.com/keys"
+          # Override only if the TLS SNI/Host header must differ from issuer.
+          jwksHost: "dex.example.com"
+        github:
+          # Enable this only when GitHub Actions or other GitHub OIDC-based
+          # automation should call Directory directly.
+          enabled: true
+          issuer: "https://token.actions.githubusercontent.com"
+          jwksUri: "https://token.actions.githubusercontent.com/.well-known/jwks"
+          jwksHost: "token.actions.githubusercontent.com"
+          # Optionally require one or more audience values on workflow tokens.
+          # audiences:
+          #   - "dir"
+        # JWKS fetch timeout and cache duration for the Envoy jwt_authn filter.
+        jwksTimeout: 5s
+        jwksCacheSeconds: 300
+
+      spiffe:
+        # Keep SPIFFE enabled so Envoy authenticates to Directory over mTLS.
+        enabled: true
+        trustDomain: example.org
+        className: dir-spire
+
+      # Optional image override if you need to pin a custom Envoy build.
+      # image:
+      #   repository: envoyproxy/envoy
+      #   tag: distroless-v1.37-latest
+      #   pullPolicy: IfNotPresent
+
+      # Optional service or resource tuning for public ingress deployments.
+      # service:
+      #   type: ClusterIP
+      #   port: 8080
+      #   annotations: {}
+      # resources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 128Mi
+      #   limits:
+      #     cpu: 500m
+      #     memory: 512Mi
+
+    authServer:
+      # ext-authz is a separate gRPC service that makes the allow/deny decision
+      # after Envoy validates the JWT and forwards selected claims.
+      replicaCount: 2
+
+      # Keep the authz image on the same release line as Directory unless you
+      # are intentionally testing a custom authz build.
+      image:
+        repository: ghcr.io/agntcy/envoy-authz
+        tag: v1.2.0
+        pullPolicy: IfNotPresent
+
+      # Optional resource tuning for heavier public traffic.
+      # resources:
+      #   requests:
+      #     cpu: 100m
+      #     memory: 128Mi
+      #   limits:
+      #     cpu: 500m
+      #     memory: 512Mi
+
+      oidc:
+        claims:
+          # "sub" is the safest generic default. Switch to
+          # "preferred_username" if your IdP guarantees that claim.
+          userID: "sub"
+          emailPath: "email"
+
+        # Map known issuers to principal types. This is how ext-authz decides
+        # whether a token represents a human user, service client, or GitHub
+        # workflow principal.
+        # Example:
+        # issuers:
+        #   - provider: "https://dex.example.com"
+        #     principalType: "user"
+        #   - provider: "https://token.actions.githubusercontent.com"
+        #     principalType: "github"
+        # Add one entry per issuer you expect Envoy to accept above.
+        issuers: []
+
+        principalType:
+          # auto   -> infer from claims
+          # user   -> treat tokens as human users
+          # client -> treat tokens as service principals
+          # github -> treat tokens as GitHub workflow principals
+          mode: "auto"
+          machineIdentityClaim: "client_id"
+          machineSubPattern: ""
+
+        # Explicitly block individual principals if needed.
+        userDenyList: []
+
+        # Requests to these paths bypass role checks in ext-authz.
+        publicPaths:
+          - "/healthz"
+          - "/grpc.reflection"
+
+        # Roles map OIDC-derived principals to allowed gRPC methods.
+        # Principal examples:
+        # - user:https://dex.example.com:alice
+        # - client:https://dex.example.com:dirctl-service
+        # - ghwf:repo:agntcy/dir:workflow:import-records.yaml:ref:refs/heads/main
+        # - ghwf:repo:your-org/your-repo:workflow:import-records.yaml:ref:refs/heads/main
+        # - ghwf:repo:your-org/your-repo:workflow:deploy.yml:ref:refs/tags/v1.2.0
+        #
+        # Workflow principal format:
+        # ghwf:repo:<owner>/<repo>:workflow:<workflow-file>:ref:<git-ref>
+        #
+        # Common git-ref examples:
+        # - refs/heads/main
+        # - refs/heads/release/*
+        # - refs/tags/v1.2.0
+        roles:
+          admin:
+            allowedMethods: ["*"]
+            users: []
+            clients: []
+            githubWorkflows: []
+
+          viewer:
+            allowedMethods:
+              - "/agntcy.dir.store.v1.StoreService/Pull"
+              - "/agntcy.dir.store.v1.StoreService/Lookup"
+              - "/agntcy.dir.store.v1.StoreService/PullReferrer"
+              - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+              - "/agntcy.dir.search.v1.SearchService/SearchRecords"
+            users: []
+            clients: []
+            githubWorkflows: []
+
+          ci-writer:
+            allowedMethods:
+              - "/agntcy.dir.store.v1.StoreService/Push"
+              - "/agntcy.dir.store.v1.StoreService/PushReferrer"
+              - "/agntcy.dir.store.v1.StoreService/Pull"
+              - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+              - "/agntcy.dir.search.v1.SearchService/SearchRecords"
+            users: []
+            clients: []
+            # Replace [] with explicit workflow principals when CI should write to
+            # the Directory through GitHub OIDC tokens.
+            githubWorkflows:
+              # Example: allow the main branch import workflow in a single repo.
+              # - "ghwf:repo:your-org/your-repo:workflow:import-records.yaml:ref:refs/heads/main"
+              #
+              # Example: allow any branch for a dedicated OIDC test workflow.
+              # - "ghwf:repo:your-org/your-repo:workflow:oidc-test.yml:ref:refs/heads/*"
+              #
+              # Example: allow release tags for a deployment workflow.
+              # - "ghwf:repo:your-org/your-repo:workflow:deploy.yml:ref:refs/tags/v*"
+
+    ingress:
+      # Expose Envoy through a gRPC-capable ingress only when you want remote
+      # users or automation to reach Directory from outside the cluster.
+      # This is the hostname that remote dirctl or SDK clients will target.
+      enabled: false
+      className: nginx
+      host: "" # e.g. gateway.example.com
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+        external-dns.alpha.kubernetes.io/hostname: ""
+        nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+        nginx.ingress.kubernetes.io/grpc-backend: "true"
+        # Optional rate limiting for public exposure.
+        # nginx.ingress.kubernetes.io/limit-rps: "100"
+        # nginx.ingress.kubernetes.io/limit-rpm: "6000"
+        # nginx.ingress.kubernetes.io/limit-connections: "100"
+        # nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+        # Some ingress controllers require an explicit gRPC service annotation.
+        # nginx.org/grpc-services: "dir-dir-dev-argoapp-envoy-authz-envoy"
+      tls:
+        enabled: true
+        secretName: ""
 
   # PostgreSQL subchart configuration
   # Deploys PostgreSQL alongside the apiserver
