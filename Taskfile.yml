@@ -6,6 +6,7 @@ version: '3'
 vars:
   VULN_SCAN_CHARTS:
     - applications/dir/dev
+    - applications/oidc-gateway/dev
     - applications/spire/dev
     - applications/dex/dev
     - applications/dex-credentials/dev

@@ -1,0 +1,173 @@
+# Standalone OIDC Gateway example for dev/staging
+#
+# This chart is deployed separately from `dir` and sits in front of the
+# internal Directory gRPC Service:
+#
+#   remote client -> OIDC provider -> Envoy jwt_authn -> ext_authz -> Directory
+#
+# Use this gateway when you want:
+# - remote `dirctl` access from outside the cluster
+# - browser/device-flow login backed by Dex
+# - GitHub Actions or other external automation to call Directory with OIDC tokens
+#
+# Keep it out of the deployment if you only need in-cluster SPIFFE-based access.
+
+envoy:
+  # Run more than one Envoy replica for shared or public environments.
+  replicaCount: 2
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  backend:
+    # Point Envoy at the internal Directory Service, not the public gateway host.
+    address: "dir-dir-dev-argoapp-apiserver.dir-dev-dir.svc.cluster.local"
+    port: 8888
+    # Default Envoy route timeout for normal Directory RPCs.
+    # This is an overall timeout on the Envoy -> apiserver hop.
+    timeout: 30s
+    # Preserve the long-lived event stream route.
+    streamingPath: "/agntcy.dir.events.v1.EventService/Listen"
+    # 0s disables the Envoy route timeout for that stream, but any tighter
+    # ingress timeout can still terminate the request first.
+    listenRouteTimeout: 0s
+
+  oidc:
+    # JWT validation at the edge. Add one issuer entry per human/user IdP.
+    issuers:
+      - name: dex
+        enabled: true
+        # Keep these values aligned with applications/dex/dev/values.yaml.
+        issuer: "https://dex.example.com"
+        jwksUri: "https://dex.example.com/keys"
+        jwksHost: "dex.example.com"
+    github:
+      # Enable this when GitHub Actions or other GitHub OIDC-based automation
+      # should call Directory directly.
+      enabled: true
+      issuer: "https://token.actions.githubusercontent.com"
+      jwksUri: "https://token.actions.githubusercontent.com/.well-known/jwks"
+      jwksHost: "token.actions.githubusercontent.com"
+      # Optionally require one or more audience values on workflow tokens.
+      audiences:
+        - "dir"
+    # JWKS fetch timeout and cache duration for Envoy's jwt_authn filter.
+    jwksTimeout: 5s
+    jwksCacheSeconds: 300
+
+  spiffe:
+    # Keep SPIFFE enabled so Envoy authenticates to Directory over mTLS.
+    enabled: true
+    trustDomain: example.org
+    className: dir-spire
+
+authServer:
+  # ext_authz is a separate gRPC service that makes the allow/deny decision
+  # after Envoy validates the JWT and forwards selected claims.
+  replicaCount: 2
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  image:
+    repository: ghcr.io/agntcy/oidc-gateway
+    tag: v0.1.1
+    pullPolicy: IfNotPresent
+
+  config:
+    # The authz server reads a rendered config file from /etc/oidc-gateway/config.yaml.
+    listenAddress: ":9002"
+    logLevel: info
+
+  oidc:
+    claims:
+      # "sub" is the safest generic default.
+      # Switch to preferred_username if your IdP guarantees it consistently.
+      userID: "sub"
+      emailPath: "email"
+    issuers:
+      # Map known issuers to principal types. This is how ext_authz decides
+      # whether a token represents a human user, service client, or GitHub
+      # workflow principal.
+      - provider: "https://dex.example.com"
+        principalType: "user"
+      - provider: "https://token.actions.githubusercontent.com"
+        principalType: "github"
+    principalType:
+      # auto   -> infer from claims
+      # user   -> treat tokens as human users
+      # client -> treat tokens as service principals
+      # github -> treat tokens as GitHub workflow principals
+      mode: "auto"
+      machineIdentityClaim: "client_id"
+      machineSubPattern: ""
+    # Explicitly block individual principals if needed.
+    userDenyList: []
+    publicPaths:
+      - "/healthz"
+      - "/grpc.reflection"
+    roles:
+      # Roles map OIDC-derived principals to allowed gRPC methods.
+      # Principal examples:
+      # - user:https://dex.example.com:alice
+      # - client:https://dex.example.com:dirctl-service
+      # - ghwf:repo:your-org/your-repo:workflow:import-records.yaml:ref:refs/heads/main
+      admin:
+        allowedMethods: ["*"]
+        users: []
+        clients: []
+        githubWorkflows: []
+      viewer:
+        allowedMethods:
+          - "/agntcy.dir.store.v1.StoreService/Pull"
+          - "/agntcy.dir.store.v1.StoreService/Lookup"
+          - "/agntcy.dir.store.v1.StoreService/PullReferrer"
+          - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+          - "/agntcy.dir.search.v1.SearchService/SearchRecords"
+        users: []
+        clients: []
+        githubWorkflows: []
+      ci-writer:
+        allowedMethods:
+          - "/agntcy.dir.store.v1.StoreService/Push"
+          - "/agntcy.dir.store.v1.StoreService/PushReferrer"
+          - "/agntcy.dir.store.v1.StoreService/Pull"
+          - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+          - "/agntcy.dir.search.v1.SearchService/SearchRecords"
+        users: []
+        clients: []
+        # Replace [] with explicit workflow principals when CI should write to
+        # the Directory through GitHub OIDC tokens.
+        githubWorkflows: []
+
+ingress:
+  # Expose Envoy through a gRPC-capable ingress only when you want remote
+  # users or automation to reach Directory from outside the cluster.
+  enabled: false
+  className: nginx
+  host: "" # e.g. gateway.example.com
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    external-dns.alpha.kubernetes.io/hostname: ""
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/grpc-backend: "true"
+    # Optional rate limiting for public exposure.
+    # nginx.ingress.kubernetes.io/limit-rps: "100"
+    # nginx.ingress.kubernetes.io/limit-rpm: "6000"
+    # nginx.ingress.kubernetes.io/limit-connections: "100"
+    # nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    # Some ingress controllers require the rendered Envoy service name explicitly.
+    # nginx.org/grpc-services: "oidc-gateway-dir-dev-argoapp-envoy"
+  tls:
+    enabled: true
+    secretName: ""
