@@ -8,7 +8,7 @@ The manifests are organized into two main sections:
 
 The project will deploy the following components:
 - `applications/dir` - AGNTCY Directory server with storage backend (v1.3.0)
-- `applications/oidc-gateway` - optional standalone OIDC gateway for external `dirctl` / SDK / automation access (v0.1.1)
+- `applications/oidc-gateway` - optional standalone OIDC/SPIFFE gateway for external `dirctl` / SDK / automation access (v1.0.0)
 - `applications/spire*` - SPIRE stack for identity and federation (with SPIFFE CSI driver)
 
 **NOTE**: This is not a production-ready deployment. It is
@@ -54,7 +54,7 @@ As of `dir` `v1.3.0`, the Helm chart provides a default DHT bootstrap address fo
 
 ---
 
-## Optional OIDC Authentication Gateway
+## Optional OIDC/SPIFFE Authentication Gateway
 
 The default Directory deployment in this repository uses SPIFFE/SPIRE-oriented authentication that works well for in-cluster workloads. If you also want to support `dirctl`, SDKs, or automation running **outside** the cluster, deploy the standalone `oidc-gateway` application alongside `dir`.
 
@@ -64,10 +64,10 @@ The public gateway chart lives in the dedicated repository:
 
 This gateway puts Envoy in front of Directory:
 
-1. A remote client gets an OIDC token from your identity provider.
-2. Envoy validates the JWT using the configured issuer and JWKS settings.
-3. The ext-authz service maps token claims to roles and allowed gRPC methods.
-4. Only authorized requests are forwarded to the internal Directory apiserver.
+1. A remote client presents an OIDC JWT, SPIFFE JWT-SVID, or SPIFFE X.509-SVID.
+2. Envoy validates bearer JWTs with `jwt_authn` or downstream SPIFFE mTLS when enabled.
+3. The ext-authz service normalizes the caller to a canonical principal and checks allowed gRPC methods.
+4. Only authorized requests are forwarded to the internal Directory apiserver with the configured principal header.
 
 ### When to Use It
 
@@ -84,10 +84,11 @@ You do not need this gateway if you only use in-cluster, SPIFFE-based access.
 The staging example now includes a separate `oidc-gateway` app under `applications/oidc-gateway/dev/`. The main settings are:
 
 - `envoy.backend.*`: points Envoy at the internal Directory service
-- `envoy.oidc.issuers[]`: configures user-facing OIDC issuers such as Dex
+- `envoy.oidc.issuers[]`: configures Envoy `jwt_authn` providers and JWKS lookup for bearer-token validation
 - `envoy.oidc.github.*`: configures GitHub Actions OIDC for automation
-- `authServer.oidc.issuers`: maps issuers to principal types such as `user` or `github`
-- `authServer.oidc.roles`: maps users, clients, or workflows to allowed gRPC methods
+- `authServer.oidc.issuers`: maps verified token issuers to stable provider keys such as `dex` or `github`
+- `authServer.oidc.headers.authPrincipal`: sets the canonical principal header forwarded to Directory (`x-auth-principal` by default)
+- `authServer.oidc.roles`: maps canonical principals such as `oidc:dex:alice`, `oidc:github:repo:...`, or `spiffe:spiffe://...` to allowed gRPC methods
 - `ingress.*`: exposes the Envoy gateway for external access over gRPC
 
 ### Dex and Remote Clients

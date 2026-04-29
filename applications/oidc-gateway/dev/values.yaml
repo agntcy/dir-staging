@@ -3,7 +3,7 @@
 # This chart is deployed separately from `dir` and sits in front of the
 # internal Directory gRPC Service:
 #
-#   remote client -> OIDC provider -> Envoy jwt_authn -> ext_authz -> Directory
+#   remote client -> OIDC/SPIFFE identity -> Envoy -> ext_authz -> Directory
 #
 # Use this gateway when you want:
 # - remote `dirctl` access from outside the cluster
@@ -38,7 +38,9 @@ envoy:
     listenRouteTimeout: 0s
 
   oidc:
-    # JWT validation at the edge. Add one issuer entry per human/user IdP.
+    # Envoy jwt_authn configuration.
+    # This validates bearer JWTs at the edge and forwards verified payloads to ext_authz.
+    # Keep this separate from authServer.oidc, which maps verified identities to roles.
     issuers:
       - name: dex
         enabled: true
@@ -81,7 +83,7 @@ authServer:
 
   image:
     repository: ghcr.io/agntcy/oidc-gateway
-    tag: v0.1.1
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   config:
@@ -90,43 +92,42 @@ authServer:
     logLevel: info
 
   oidc:
+    # ext_authz authorization configuration.
+    # This consumes the identities validated by Envoy and applies canonical-principal RBAC.
+    # Keep issuer providers aligned with envoy.oidc issuers above.
     claims:
       # "sub" is the safest generic default.
       # Switch to preferred_username if your IdP guarantees it consistently.
-      userID: "sub"
-      emailPath: "email"
+      principalClaim: "sub"
+      emailClaimPath: "email"
+    headers:
+      # ext_authz forwards this canonical principal header to Directory.
+      # Envoy strips client-supplied values for the same header.
+      authPrincipal: "x-auth-principal"
     issuers:
-      # Map known issuers to principal types. This is how ext_authz decides
-      # whether a token represents a human user, service client, or GitHub
-      # workflow principal.
-      - provider: "https://dex.example.com"
-        principalType: "user"
-      - provider: "https://token.actions.githubusercontent.com"
-        principalType: "github"
-    principalType:
-      # auto   -> infer from claims
-      # user   -> treat tokens as human users
-      # client -> treat tokens as service principals
-      # github -> treat tokens as GitHub workflow principals
-      mode: "auto"
-      machineIdentityClaim: "client_id"
-      machineSubPattern: ""
+      # Map known issuers to stable provider keys used in canonical principals.
+      # OIDC principals become oidc:<providerKey>:<claim-value>.
+      - providerKey: "dex"
+        provider: "https://dex.example.com"
+        authFamily: "oidc"
+      - providerKey: "github"
+        provider: "https://token.actions.githubusercontent.com"
+        authFamily: "oidc"
     # Explicitly block individual principals if needed.
-    userDenyList: []
+    denyList: []
     publicPaths:
       - "/healthz"
       - "/grpc.reflection"
     roles:
-      # Roles map OIDC-derived principals to allowed gRPC methods.
+      # Roles map canonical principals to allowed gRPC methods.
       # Principal examples:
-      # - user:https://dex.example.com:alice
-      # - client:https://dex.example.com:dirctl-service
-      # - ghwf:repo:your-org/your-repo:workflow:import-records.yaml:ref:refs/heads/main
+      # - oidc:dex:alice
+      # - oidc:dex:dirctl-service
+      # - oidc:github:repo:your-org/your-repo:workflow:import-records.yaml:ref:refs/heads/main
+      # - spiffe:spiffe://example.org/ns/default/sa/workload
       admin:
         allowedMethods: ["*"]
-        users: []
-        clients: []
-        githubWorkflows: []
+        principals: []
       viewer:
         allowedMethods:
           - "/agntcy.dir.store.v1.StoreService/Pull"
@@ -134,9 +135,7 @@ authServer:
           - "/agntcy.dir.store.v1.StoreService/PullReferrer"
           - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
           - "/agntcy.dir.search.v1.SearchService/SearchRecords"
-        users: []
-        clients: []
-        githubWorkflows: []
+        principals: []
       ci-writer:
         allowedMethods:
           - "/agntcy.dir.store.v1.StoreService/Push"
@@ -144,11 +143,9 @@ authServer:
           - "/agntcy.dir.store.v1.StoreService/Pull"
           - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
           - "/agntcy.dir.search.v1.SearchService/SearchRecords"
-        users: []
-        clients: []
         # Replace [] with explicit workflow principals when CI should write to
         # the Directory through GitHub OIDC tokens.
-        githubWorkflows: []
+        principals: []
 
 ingress:
   # Expose Envoy through a gRPC-capable ingress only when you want remote
