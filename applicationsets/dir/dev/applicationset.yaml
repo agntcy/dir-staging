@@ -27,6 +27,9 @@ spec:
                 - appName: dir
                   namespace: dir-dev-dir
                   syncWave: "2"
+                - appName: oidc-gateway
+                  namespace: dir-dev-oidc-gateway
+                  syncWave: "3"
           # Get cluster config to set the cluster address
           - matrix:
               generators:
@@ -37,6 +40,7 @@ spec:
                       - appName: spire
                       - appName: dex
                       - appName: dir
+                      - appName: oidc-gateway
                 - git:
                     repoURL: "https://github.com/agntcy/dir-staging"
                     revision: main
@@ -52,6 +56,7 @@ spec:
                       - appName: spire
                       - appName: dex
                       - appName: dir
+                      - appName: oidc-gateway
                 - git:
                     repoURL: "https://github.com/agntcy/dir-staging"
                     revision: main

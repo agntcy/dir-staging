@@ -19,8 +19,8 @@ config:
   # Public URL where Dex is exposed (must match ingress/DNS)
   # Keep this value aligned with:
   # - connectors[].config.redirectURI (same hostname + /callback)
-  # - applications/dir/dev/values.yaml -> apiserver.envoy-authz.envoy.oidc.dex.issuer
-  # - applications/dir/dev/values.yaml -> apiserver.envoy-authz.authServer.oidc.issuers[].provider
+  # - applications/oidc-gateway/dev/values.yaml -> envoy.oidc.issuers[].issuer
+  # - applications/oidc-gateway/dev/values.yaml -> authServer.oidc.issuers[].provider
   issuer: https://dex.example.com
 
   storage:
@@ -44,7 +44,7 @@ config:
       name: Directory CLI
       # Public client for browser/device login flows from developer machines.
       # The CLI is expected to obtain a Dex token first, then call the Directory
-      # OIDC gateway exposed by applications/dir/dev/values.yaml.
+      # OIDC gateway exposed by applications/oidc-gateway/dev/values.yaml.
       public: true
       redirectURIs:
         # Local browser callback used by interactive login flows.
