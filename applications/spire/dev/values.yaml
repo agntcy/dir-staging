@@ -19,3 +19,9 @@ spire-server:
 
   controllerManager:
     className: dir-spire
+
+# This dev environment uses X.509 SPIFFE identities plus Dex/GitHub OIDC.
+# Disable the SPIRE OIDC discovery provider until upstream ships a helper image
+# without the currently open high/critical Trivy findings.
+spiffe-oidc-discovery-provider:
+  enabled: false

@@ -215,7 +215,8 @@ apiserver:
   postgresql:
     enabled: true
     image:
-      tag: "latest@sha256:621359194c6a0f0fd502c1996f40f539c3e5f2da43401b6d52ee5614722b7cba"
+      tag: "latest"
+      digest: "sha256:ac855a024049fc14d6b73e38ae3b53cf2d93ae69bf7c6174eda550a5de6f5227"
     auth:
       username: "dir"
       password: "dir"
@@ -265,6 +266,9 @@ apiserver:
 
   # Zot registry configuration (subchart)
   zot:
+    image:
+      tag: v2.1.17
+
     # Resources: use chart default for Kind (allows flexible scheduling)
     resources: {}
 
