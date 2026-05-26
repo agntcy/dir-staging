@@ -15,14 +15,8 @@ spec:
                 - appName: spire-crds
                   namespace: dir-dev-spire-crds
                   syncWave: "0"
-                - appName: dex-credentials
-                  namespace: dir-dev-dex
-                  syncWave: "0"
                 - appName: spire
                   namespace: dir-dev-spire
-                  syncWave: "1"
-                - appName: dex
-                  namespace: dir-dev-dex
                   syncWave: "1"
                 - appName: dir
                   namespace: dir-dev-dir
@@ -36,9 +30,7 @@ spec:
                 - list:
                     elements:
                       - appName: spire-crds
-                      - appName: dex-credentials
                       - appName: spire
-                      - appName: dex
                       - appName: dir
                       - appName: oidc-gateway
                 - git:
@@ -52,9 +44,7 @@ spec:
                 - list:
                     elements:
                       - appName: spire-crds
-                      - appName: dex-credentials
                       - appName: spire
-                      - appName: dex
                       - appName: dir
                       - appName: oidc-gateway
                 - git:
