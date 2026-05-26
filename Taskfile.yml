@@ -4,12 +4,12 @@
 version: '3'
 
 vars:
-  # Keep this list aligned with the dev ApplicationSet. Optional charts that are
-  # not deployed by default should not keep failing the mainline image scan.
   VULN_SCAN_CHARTS:
     - applications/dir/dev
     - applications/oidc-gateway/dev
     - applications/spire/dev
+    - applications/dex/dev
+    - applications/dex-credentials/dev
 
 tasks:
   default:

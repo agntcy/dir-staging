@@ -43,7 +43,7 @@ envoy:
     # Keep this separate from authServer.oidc, which maps verified identities to roles.
     issuers:
       - name: dex
-        enabled: false
+        enabled: true
         # Keep these values aligned with applications/dex/dev/values.yaml.
         issuer: "https://dex.example.com"
         jwksUri: "https://dex.example.com/keys"
@@ -107,6 +107,9 @@ authServer:
     issuers:
       # Map known issuers to stable provider keys used in canonical principals.
       # OIDC principals become oidc:<providerKey>:<claim-value>.
+      - providerKey: "dex"
+        provider: "https://dex.example.com"
+        authFamily: "oidc"
       - providerKey: "github"
         provider: "https://token.actions.githubusercontent.com"
         authFamily: "oidc"
