@@ -25,3 +25,10 @@ spire-server:
 # without the currently open high/critical Trivy findings.
 spiffe-oidc-discovery-provider:
   enabled: false
+
+spiffe-csi-driver:
+  image:
+    tag: "0.2.9"
+  nodeDriverRegistrar:
+    image:
+      tag: "v2.17.0"
