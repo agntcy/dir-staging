@@ -15,6 +15,9 @@
 
 replicaCount: 1
 
+image:
+  tag: v2.45.1
+
 config:
   # Public URL where Dex is exposed (must match ingress/DNS)
   # Keep this value aligned with:
