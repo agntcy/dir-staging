@@ -16,7 +16,7 @@
 replicaCount: 1
 
 image:
-  tag: v2.45.1
+  tag: v2.45.1-distroless
 
 config:
   # Public URL where Dex is exposed (must match ingress/DNS)
