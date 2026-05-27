@@ -14,15 +14,24 @@ global:
     enabled: false
 
 spire-server:
+  image:
+    tag: "1.15.0"
+
   federation:
     enabled: true
 
   controllerManager:
+    image:
+      tag: "0.6.4"
     className: dir-spire
 
 # This dev environment uses X.509 SPIFFE identities plus Dex/GitHub OIDC.
 # Disable the SPIRE OIDC discovery provider until upstream ships a helper image
 # without the currently open high/critical Trivy findings.
+spire-agent:
+  image:
+    tag: "1.15.0"
+
 spiffe-oidc-discovery-provider:
   enabled: false
 
