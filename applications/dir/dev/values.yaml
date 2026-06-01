@@ -216,7 +216,7 @@ apiserver:
     enabled: true
     image:
       tag: "latest"
-      digest: "sha256:ac855a024049fc14d6b73e38ae3b53cf2d93ae69bf7c6174eda550a5de6f5227"
+      digest: "sha256:e096628cc140f02d50d13718558444038f841b12e9a8968a1e2163fb43839921"
     auth:
       username: "dir"
       password: "dir"
