@@ -1,0 +1,5 @@
+className: dir-spire
+trustDomain: spire.ads.outshift.io
+bundleEndpointURL: https://spire.ads.outshift.io
+bundleEndpointProfile:
+  type: https_web

@@ -26,7 +26,7 @@ Federation is required before you can discover or publish agents. The test in st
 | Service              | URL                                      | Purpose                                     |
 | -------------------- | ---------------------------------------- | ------------------------------------------- |
 | **Directory API**    | `https://prod.api.ads.outshift.io`       | Main API for agent discovery and management |
-| **SPIRE Federation** | `https://prod.spire.ads.outshift.io`     | SPIRE server for secure identity federation |
+| **SPIRE Federation** | `https://spire.ads.outshift.io`     | SPIRE server for secure identity federation |
 | **Status Dashboard** | `https://prod.status.ads.outshift.io`    | Real-time service status and monitoring     |
 
 ## 🎯 Prerequisites
@@ -72,7 +72,7 @@ See [Federation Profiles](https://docs.agntcy.org/dir/federation-profiles/) for 
 
 4. **Configure your SPIRE** to federate with Directory:
    - **If you deploy from this repo:** run `task gen:dir` to regenerate `applications/dir/gen.values.yaml`; ArgoCD will sync.
-   - **If you have a custom deployment:** add Directory's federation config to your SPIRE. Use [federation/prod.ads.outshift.io.yaml](federation/prod.ads.outshift.io.yaml) as reference; add a `ClusterFederatedTrustDomain` (or equivalent) for `prod.ads.outshift.io`.
+   - **If you have a custom deployment:** add Directory's federation config to your SPIRE. Use [federation/spire.ads.outshift.io.yaml](federation/spire.ads.outshift.io.yaml) as reference; add a `ClusterFederatedTrustDomain` (or equivalent) for `spire.ads.outshift.io`.
 
 For full federation setup, [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) and [Federation Troubleshooting](https://docs.agntcy.org/dir/federation-troubleshooting/).
 
