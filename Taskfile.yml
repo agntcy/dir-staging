@@ -70,7 +70,7 @@ tasks:
     vars:
       DEST_VALUES: "{{ .ROOT_DIR }}/applications/dir/gen.values.yaml"
       # Glob pattern matches visible .yaml files only (excludes hidden .*.yaml templates)
-      # Matches: dev.ads.outshift.io.yaml, prod.ads.outshift.io.yaml, etc.
+      # Matches: dev.ads.outshift.io.yaml, spire.ads.outshift.io.yaml, etc.
       # Excludes: .federation.web.template.yaml, .federation.spiffe.template.yaml
       FEDERATION_SOURCE: "{{ .ROOT_DIR }}/onboarding/federation/*.yaml"
     cmds:

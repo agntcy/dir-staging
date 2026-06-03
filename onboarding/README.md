@@ -23,11 +23,12 @@ Federation is required before you can discover or publish agents. The test in st
 
 ## 🌐 Available Endpoints
 
-| Service              | URL                                      | Purpose                                     |
-| -------------------- | ---------------------------------------- | ------------------------------------------- |
-| **Directory API**    | `https://prod.api.ads.outshift.io`       | Main API for agent discovery and management |
-| **SPIRE Federation** | `https://spire.ads.outshift.io`     | SPIRE server for secure identity federation |
-| **Status Dashboard** | `https://prod.status.ads.outshift.io`    | Real-time service status and monitoring     |
+| Service              | URL                              | Purpose                                                                 |
+| -------------------- | -------------------------------- | ----------------------------------------------------------------------- |
+| **Directory API**    | `ads.outshift.io:443`            | Main gRPC API for agent discovery and management (via the OIDC/JWT gateway) |
+| **OIDC Issuer**      | `https://idp.ads.outshift.io`    | OIDC token issuer (Dex) for CLI and human authentication                |
+| **SPIRE Federation** | `https://spire.ads.outshift.io`  | SPIRE bundle endpoint for identity federation (trust domain `spire.ads.outshift.io`) |
+| **OCI Registry**     | `https://store.ads.outshift.io`  | OCI registry storing Directory records (pulled by peers during sync)    |
 
 ## 🎯 Prerequisites
 
@@ -82,7 +83,7 @@ Once federation is complete, test:
 
 ```bash
 dirctl pull bafytest123 \
-  --server-addr prod.api.ads.outshift.io \
+  --server-addr ads.outshift.io:443 \
   --spiffe-socket-path /tmp/spire-agent/public.sock
 # Expected: Error: record not found (proves connection and federation work)
 ```

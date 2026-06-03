@@ -105,7 +105,7 @@ This page covers operational best practices and troubleshooting for Directory fe
 spire-agent api fetch x509-svid
 
 # Verify network connectivity
-curl -v https://prod.api.ads.outshift.io
+curl -v https://ads.outshift.io
 
 # Verify env vars are set
 echo $DIRECTORY_CLIENT_SERVER_ADDRESS $DIRECTORY_CLIENT_SPIFFE_SOCKET_PATH

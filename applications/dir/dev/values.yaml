@@ -151,7 +151,7 @@ apiserver:
       # As of dir v1.3.0, the Helm chart provides a public testbed bootstrap
       # address by default. Leave this unset unless you need to override it.
       # Current default:
-      # - /dns4/prod.routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu
+      # - /dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu
       # bootstrap_peers:
       #   - /ip4/1.1.1.1/tcp/1
       #   - /ip4/1.1.1.1/tcp/2
