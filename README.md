@@ -143,7 +143,7 @@ Federation requires configuring SPIRE to exchange trust bundles with other Direc
 2. **Create Your Federation File**
    - Describes how others can connect to your SPIRE federation endpoint
    - Template: `onboarding/federation/.federation.web.template.yaml` (or `.federation.spiffe.template.yaml`)
-   - Example: See `onboarding/federation/prod.ads.outshift.io.yaml` for reference
+   - Example: See `onboarding/federation/spire.ads.outshift.io.yaml` for reference
 
 3. **Submit Your Federation File**
    - Fork this repository
@@ -151,7 +151,7 @@ Federation requires configuring SPIRE to exchange trust bundles with other Direc
    - Submit a Pull Request
 
 4. **Deploy Directory's Federation File**
-   - After approval, deploy `onboarding/federation/prod.ads.outshift.io.yaml` to your cluster
+   - After approval, deploy `onboarding/federation/spire.ads.outshift.io.yaml` to your cluster
    - Run `task gen:dir` to regenerate `applications/dir/gen.values.yaml`
    - ArgoCD will automatically sync the federation configuration
    - This tells your SPIRE how to connect to the Directory network
