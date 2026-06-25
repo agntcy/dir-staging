@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Editor backups
+*~
+*.swp
+*.swo
+
+# Local environment and secrets
+.env
+.env.*
