@@ -1,0 +1,132 @@
+apiserver:
+  image:
+    tag: "${apiserver_image_tag}"
+
+  spire:
+    enabled: true
+    className: "dir-spire"
+    useCSIDriver: true
+    dnsNameTemplates:
+      - "api.${base_fqdn}"
+%{ if length(federation_yaml) > 0 }
+    federation:
+${federation_yaml}
+%{ endif }
+  authz_policies_csv: |
+${authz_policies_csv}
+
+  config:
+    trustDomain: ${trust_domain}
+    authn:
+      enabled: true
+    authz:
+      enabled: true
+    database:
+      type: postgres
+      postgres:
+        host: ""
+        port: 5432
+        database: dir
+        ssl_mode: disable
+    store:
+      oci:
+        auth_config:
+          insecure: "true"
+          username: "admin"
+          password: "admin"
+        registry_address: "dir-zot.${namespace}.svc.cluster.local:5000"
+        repository_name: dir
+      provider: oci
+    routing:
+      bootstrap_peers:
+        - /dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu
+      gossipsub:
+        enabled: true
+      listen_address: /ip4/0.0.0.0/tcp/5555
+
+  # P2P Routing service configuration for production deployment
+  routingService:
+    type: LoadBalancer
+    cloudProvider: "gcp"
+    externalTrafficPolicy: Cluster
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: "routing.${base_fqdn}"
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"
+    hosts:
+      - host: api.${base_fqdn}
+        http:
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+              backend:
+                service:
+                  name: dir-apiserver
+                  port:
+                    name: grpc
+    tls:
+      - hosts:
+          - api.${base_fqdn}
+
+  postgresql:
+    enabled: true
+    existingSecret: ${credentials_secret_name}
+
+  zot:
+    enabled: true
+    persistence:
+      enabled: true
+      size: ${zot_pvc_size}
+      storageClass: standard-rwo
+    authentication:
+      existingSecret: ${credentials_secret_name}
+      htpasswdKey: zot-htpasswd
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - host: zot.${base_fqdn}
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - hosts:
+            - zot.${base_fqdn}
+          secretName: zot-tls
+
+  reconciler:
+    enabled: ${reconciler_enabled}
+    image:
+      repository: ghcr.io/agntcy/dir-reconciler
+      tag: ${reconciler_image_tag}
+      pullPolicy: IfNotPresent
+    config:
+      database:
+        type: postgres
+        postgres:
+          host: ""
+          port: 5432
+          database: dir
+          ssl_mode: disable
+      local_registry:
+        registry_address: "dir-zot.${namespace}.svc.cluster.local:5000"
+        repository_name: ""
+        auth_config:
+          insecure: true
+      regsync:
+        enabled: ${reconciler_regsync_enabled}
+        interval: ${reconciler_regsync_interval}
+        timeout: ${reconciler_regsync_timeout}
+        authn:
+          enabled: true
+          mode: x509
+          socket_path: unix:///run/spire/agent-sockets/api.sock
+      indexer:
+        enabled: ${reconciler_indexer_enabled}
+        interval: ${reconciler_indexer_interval}

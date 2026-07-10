@@ -1,0 +1,56 @@
+project_id = <Google Cloud Project ID>
+public_trust_domain = "example.agntcy.testbed"
+
+# Managed-DNS inputs.
+# See README pre-flight section for the one-time gcloud setup that produces
+# these values.
+base_domain            = <example.com>
+dns_project_id         = <might match project_id>
+dns_zone_name          = <example-com>
+external_dns_gsa_email = <external-dns@project-id.iam.gserviceaccount.com>
+
+region     = "us-east1"
+gke_cluster_name = "agntcy"
+# Logical cluster name used in resource names and dir namespace (optional). Default: "public".
+cluster_name = "public"
+machine_type = "e2-medium"
+acme_email = "alex.smith@example.com"
+dir_chart_version = "v1.5.0"
+zot_pvc_size = "50Gi"
+
+# Federation configuration - list of trust domains to federate with
+# Example: ["spire.ads.outshift.io"] for production public directory
+federates_with = ["spire.ads.outshift.io"]
+
+# DIR-level federation peers configuration
+# Each peer includes className, trustDomain, bundleEndpointURL, and bundleEndpointProfile with type
+dir_federation_peers = [{
+  className               = "dir-spire"
+  trustDomain            = "spire.ads.outshift.io"
+  bundleEndpointURL      = "https://spire.ads.outshift.io"
+  bundleEndpointProfile  = {
+    type = "https_web"
+  }
+}]
+
+# Authorization policies for DIR apiserver (optional)
+# If not specified, sensible defaults will be used that allow federation
+# For custom policies, use a heredoc format:
+# authz_policies_csv = <<-EOF
+#   p,example.agntcy.testbed,*
+#   p,*,/agntcy.dir.store.v1.StoreService/Pull
+#   p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+#   p,*,/agntcy.dir.store.v1.StoreService/Lookup
+#   p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
+#   EOF
+
+# DIR Reconciler configuration (optional)
+# The reconciler syncs records and OCI registry content from federated peers
+# Defaults are production-ready based on AGNTCY recommendations
+# reconciler_enabled = true
+# reconciler_image_tag = "v1.3.0"
+# reconciler_regsync_enabled = true
+# reconciler_regsync_interval = "1m"
+# reconciler_regsync_timeout = "30m"
+# reconciler_indexer_enabled = true
+# reconciler_indexer_interval = "30m"
