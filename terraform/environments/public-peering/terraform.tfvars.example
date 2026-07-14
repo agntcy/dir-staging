@@ -2,12 +2,13 @@ project_id = <Google Cloud Project ID>
 public_trust_domain = "example.agntcy.testbed"
 
 # Managed-DNS inputs.
-# See README pre-flight section for the one-time gcloud setup that produces
-# these values.
+# The ExternalDNS GSA and IAM bindings are now created automatically if external_dns_gsa_email is not set.
+# If you have a pre-existing GSA, set external_dns_gsa_email to the GSA email address.
 base_domain            = <example.com>
 dns_project_id         = <might match project_id>
 dns_zone_name          = <example-com>
-external_dns_gsa_email = <external-dns@project-id.iam.gserviceaccount.com>
+# external_dns_gsa_email = <external-dns@project-id.iam.gserviceaccount.com>  # Optional: if not set, GSA will be created automatically
+# external_dns_gsa_name = "external-dns"  # Optional: name for auto-created GSA (default: "external-dns")
 
 region     = "us-east1"
 gke_cluster_name = "agntcy"

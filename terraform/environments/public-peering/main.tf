@@ -1,3 +1,36 @@
+# Create ExternalDNS GSA and IAM bindings if external_dns_gsa_email is not provided
+resource "google_service_account" "external_dns" {
+  count        = var.external_dns_gsa_email == "" ? 1 : 0
+  account_id   = var.external_dns_gsa_name
+  display_name = "ExternalDNS Service Account"
+  project      = var.dns_project_id
+}
+
+resource "google_project_iam_binding" "external_dns_dns_admin" {
+  count   = var.external_dns_gsa_email == "" ? 1 : 0
+  project = var.dns_project_id
+  role    = "roles/dns.admin"
+
+  members = [
+    "serviceAccount:${google_service_account.external_dns[0].email}",
+  ]
+}
+
+resource "google_service_account_iam_binding" "external_dns_workload_identity" {
+  count              = var.external_dns_gsa_email == "" ? 1 : 0
+  service_account_id = google_service_account.external_dns[0].name
+  role               = "roles/iam.workloadIdentityUser"
+
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[external-dns/external-dns]",
+  ]
+}
+
+# Use the provided GSA email or the created one
+locals {
+  external_dns_gsa_email = var.external_dns_gsa_email != "" ? var.external_dns_gsa_email : ""
+}
+
 module "public_cluster" {
   source       = "../../modules/gke-cluster"
   project_id   = var.project_id
@@ -20,7 +53,7 @@ module "public_spire" {
   base_domain            = var.base_domain
   dns_project_id         = var.dns_project_id
   dns_zone_name          = var.dns_zone_name
-  external_dns_gsa_email = var.external_dns_gsa_email
+  external_dns_gsa_email = try(local.external_dns_gsa_email != "" ? local.external_dns_gsa_email : google_service_account.external_dns[0].email, local.external_dns_gsa_email)
   federates_with         = var.federates_with
 
   providers = {

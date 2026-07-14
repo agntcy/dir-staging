@@ -77,30 +77,19 @@ gcloud services enable container.googleapis.com compute.googleapis.com dns.googl
   --project="${DIR_PROJECT}"
 ```
 
-This sets up DNS service accounts. ExternalDNS in this project needs access via Workload Identity. The following one-time setup must be done by whoever has IAM admin on the DNS project — `terraform apply` does NOT create these.
+The ExternalDNS Google Service Account and IAM bindings are now automatically created by Terraform when `external_dns_gsa_email` is not provided in your `terraform.tfvars` file. This makes the setup truly one-click.
 
-```
-# Set these to your reality. DNS_PROJECT and DIR_PROJECT can have the same value.
-DNS_PROJECT=<dns-project-id>                 # the project hosting the zone
-DIR_PROJECT=<dir-deploy-project-id>          # the project hosting our clusters
-ZONE=<managed-zone-resource-name>            # the Cloud DNS resource name
-GSA=external-dns
+**Permission Requirements for Automation:**
+The automated GSA creation requires the following permissions on the DNS project (`dns_project_id`):
+- `iam.serviceAccounts.create` - to create the service account
+- `resourcemanager.projects.setIamPolicy` - to grant DNS admin role
+- `iam.serviceAccounts.setIamPolicy` - to configure Workload Identity
 
-# 1. Create the GSA in the DNS project.
-gcloud iam service-accounts create "$GSA" --project "$DNS_PROJECT"
+If you don't have these permissions on the DNS project, you have two options:
+1. Use a pre-existing GSA by setting `external_dns_gsa_email` in your terraform.tfvars
+2. Follow the manual setup steps in `MANUAL_GSA_SETUP.md` and provide the GSA email
 
-# 2. Grant it dns.admin on project 
-gcloud projects add-iam-policy-binding "$DNS_PROJECT" \
-  --member "serviceAccount:${GSA}@${DNS_PROJECT}.iam.gserviceaccount.com" \
-  --role "roles/dns.admin"
-
-# 3. Allow the dir-deploy cluster's KSA to impersonate it (Workload Identity).
-gcloud iam service-accounts add-iam-policy-binding \
-  "${GSA}@${DNS_PROJECT}.iam.gserviceaccount.com" \
-  --project "$DNS_PROJECT" \
-  --role roles/iam.workloadIdentityUser \
-  --member "serviceAccount:${DIR_PROJECT}.svc.id.goog[external-dns/external-dns]"
-```
+If you need to use a pre-existing GSA or prefer manual setup, see `MANUAL_GSA_SETUP.md` for the manual steps and set the `external_dns_gsa_email` variable in your terraform.tfvars file.
 
 ## Usage
 

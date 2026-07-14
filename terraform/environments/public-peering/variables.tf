@@ -48,8 +48,15 @@ variable "dns_zone_name" {
 }
 
 variable "external_dns_gsa_email" {
-  description = "Pre-provisioned GSA with roles/dns.admin on the zone. See README pre-flight section."
+  description = "Pre-provisioned GSA with roles/dns.admin on the zone. If empty, the GSA will be created automatically using external_dns_gsa_name."
   type        = string
+  default     = ""
+}
+
+variable "external_dns_gsa_name" {
+  description = "Name of the ExternalDNS Google Service Account to create when external_dns_gsa_email is empty."
+  type        = string
+  default     = "external-dns"
 }
 
 variable "cluster_name" {
