@@ -82,7 +82,7 @@ variable "github_audiences" {
 variable "google_enabled" {
   description = "Enable Google OIDC provider for Google OAuth authentication."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "google_issuer" {
@@ -106,7 +106,7 @@ variable "google_jwks_host" {
 variable "google_audiences" {
   description = "Google OIDC token audiences to accept."
   type        = list(string)
-  default     = ["325559405559.apps.googleusercontent.com"]
+  default     = ["32555940559.apps.googleusercontent.com"]
 }
 
 # Custom OIDC providers

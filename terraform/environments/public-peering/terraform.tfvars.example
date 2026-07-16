@@ -14,10 +14,22 @@ region     = "us-east1"
 gke_cluster_name = "agntcy"
 # Logical cluster name used in resource names and dir namespace (optional). Default: "public".
 cluster_name = "public"
-machine_type = "e2-medium"
+machine_type = "n2-standard-4"
 acme_email = "alex.smith@example.com"
 dir_chart_version = "v1.5.0"
 zot_pvc_size = "50Gi"
+
+# OIDC Gateway configuration (optional)
+# Enables user authentication via external OIDC providers (GitHub, Google, etc.)
+# The gateway validates tokens and enforces RBAC before forwarding to Directory API
+# oidc_gateway_enabled = false  # Set to true to enable OIDC gateway
+# oidc_gateway_chart_version = "v1.0.0"
+# oidc_github_enabled = true  # Enable GitHub Actions OIDC
+# oidc_google_enabled = true  # Enable Google OAuth
+# oidc_admin_principals = ["oidc:github:your-username"]  # Users with full admin access
+# oidc_viewer_principals = ["*"]  # All authenticated users have read access
+# oidc_ci_writer_principals = ["oidc:github:repo:your-org/your-repo:workflow:*.yml"]  # CI workflows with write access
+# oidc_ingress_enabled = true  # Expose gateway via ingress
 
 # Federation configuration - list of trust domains to federate with
 # Example: ["spire.ads.outshift.io"] for production public directory
@@ -55,15 +67,3 @@ dir_federation_peers = [{
 # reconciler_regsync_timeout = "30m"
 # reconciler_indexer_enabled = true
 # reconciler_indexer_interval = "30m"
-
-# OIDC Gateway configuration (optional)
-# Enables user authentication via external OIDC providers (GitHub, Google, etc.)
-# The gateway validates tokens and enforces RBAC before forwarding to Directory API
-# oidc_gateway_enabled = false  # Set to true to enable OIDC gateway
-# oidc_gateway_chart_version = "v1.0.0"
-# oidc_github_enabled = true  # Enable GitHub Actions OIDC
-# oidc_google_enabled = false  # Enable Google OAuth
-# oidc_admin_principals = ["oidc:github:your-username"]  # Users with full admin access
-# oidc_viewer_principals = ["*"]  # All authenticated users have read access
-# oidc_ci_writer_principals = ["oidc:github:repo:your-org/your-repo:workflow:*.yml"]  # CI workflows with write access
-# oidc_ingress_enabled = true  # Expose gateway via ingress
