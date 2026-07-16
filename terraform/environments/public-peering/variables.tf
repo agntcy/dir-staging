@@ -166,13 +166,13 @@ variable "oidc_github_enabled" {
 variable "oidc_google_enabled" {
   description = "Enable Google OIDC provider for Google OAuth authentication."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "oidc_google_audiences" {
   description = "Google OIDC token audiences to accept."
   type        = list(string)
-  default     = ["325559405559.apps.googleusercontent.com"]
+  default     = ["32555940559.apps.googleusercontent.com"]
 }
 
 variable "oidc_admin_principals" {
