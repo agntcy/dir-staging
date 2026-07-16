@@ -6,13 +6,13 @@ variable "project_id" {
 variable "region" {
   description = "GCP region."
   type        = string
-  default     = "us-central1"
+  default     = "us-east1"
 }
 
 variable "machine_type" {
-  description = "Machine type for GKE cluster nodes. Default 'e2-standard-4' (4 vCPU, 16 GB RAM). For development, consider 'e2-standard-2' (2 vCPU, 8 GB RAM)."
+  description = "Machine type for GKE cluster nodes. Default 'e2-medium' (2 vCPU, 4 GB RAM). For production, consider 'e2-standard-4' (4 vCPU, 16 GB RAM)."
   type        = string
-  default     = "e2-standard-4"
+  default     = "e2-medium"
 }
 
 variable "gke_cluster_name" {
@@ -142,4 +142,59 @@ variable "reconciler_indexer_interval" {
   description = "Interval for the indexer to rebuild search indexes (e.g., '30m', '1h'). Defaults to '30m' based on AGNTCY recommendations."
   type        = string
   default     = "30m"
+}
+
+# OIDC Gateway configuration
+variable "oidc_gateway_enabled" {
+  description = "Enable OIDC gateway deployment for user authentication."
+  type        = bool
+  default     = false
+}
+
+variable "oidc_gateway_chart_version" {
+  description = "OIDC gateway Helm chart version."
+  type        = string
+  default     = "v1.0.0"
+}
+
+variable "oidc_github_enabled" {
+  description = "Enable GitHub OIDC provider for GitHub Actions authentication."
+  type        = bool
+  default     = true
+}
+
+variable "oidc_google_enabled" {
+  description = "Enable Google OIDC provider for Google OAuth authentication."
+  type        = bool
+  default     = false
+}
+
+variable "oidc_google_audiences" {
+  description = "Google OIDC token audiences to accept."
+  type        = list(string)
+  default     = ["325559405559.apps.googleusercontent.com"]
+}
+
+variable "oidc_admin_principals" {
+  description = "List of principals with admin access (full permissions). Principals should be in format 'oidc:github:user' or 'spiffe:...'."
+  type        = list(string)
+  default     = []
+}
+
+variable "oidc_viewer_principals" {
+  description = "List of principals with viewer access (read-only permissions). Defaults to all authenticated users."
+  type        = list(string)
+  default     = ["*"]
+}
+
+variable "oidc_ci_writer_principals" {
+  description = "List of principals with CI writer access (push/pull/search permissions)."
+  type        = list(string)
+  default     = []
+}
+
+variable "oidc_ingress_enabled" {
+  description = "Enable ingress for external access to the OIDC gateway."
+  type        = bool
+  default     = true
 }

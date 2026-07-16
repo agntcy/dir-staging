@@ -43,3 +43,13 @@ output "get_credentials_command" {
   description = "Run this to populate the kubectl context for the cluster."
   value       = module.public_cluster.get_credentials_command
 }
+
+output "public_oidc_gateway_url" {
+  description = "OIDC gateway endpoint for external user authentication."
+  value       = var.oidc_gateway_enabled ? module.public_oidc_gateway[0].gateway_url : null
+}
+
+output "public_oidc_gateway_dirctl_example" {
+  description = "Example dirctl command using OIDC gateway with Google authentication."
+  value       = var.oidc_gateway_enabled ? "dirctl --server-addr ${module.public_oidc_gateway[0].gateway_fqdn}:443 --auth-token $(gcloud auth print-identity-token) search" : ""
+}

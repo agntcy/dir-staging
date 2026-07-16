@@ -94,6 +94,34 @@ module "public_dir" {
   depends_on = [module.public_spire]
 }
 
+module "public_oidc_gateway" {
+  count                  = var.oidc_gateway_enabled ? 1 : 0
+  source                 = "../../modules/oidc-gateway"
+  project_id             = var.project_id
+  region                 = var.region
+  cluster_name           = var.cluster_name
+  base_fqdn              = module.public_spire.federation_fqdn
+  dir_backend_address    = "dir-apiserver.dir.svc.cluster.local"
+  trust_domain           = module.public_spire.trust_domain
+  className              = "dir-spire"
+  chart_version          = var.oidc_gateway_chart_version
+  acme_email             = var.acme_email
+  github_enabled         = var.oidc_github_enabled
+  google_enabled         = var.oidc_google_enabled
+  google_audiences       = var.oidc_google_audiences
+  admin_principals       = var.oidc_admin_principals
+  viewer_principals      = var.oidc_viewer_principals
+  ci_writer_principals   = var.oidc_ci_writer_principals
+  ingress_enabled        = var.oidc_ingress_enabled
+
+  providers = {
+    kubernetes = kubernetes.public
+    helm       = helm.public
+  }
+
+  depends_on = [module.public_dir]
+}
+
 resource "local_file" "federation_config" {
   content = templatefile("${path.module}/federation-config.yaml.tftpl", {
     trust_domain        = module.public_spire.trust_domain

@@ -36,6 +36,12 @@ Installs the AGNTCY Directory on top of the SPIRE deployment, and facilitates pu
 ### Federation Configuration
 - Generated `federation-config.yaml` file for AGNTCY onboarding process
 
+### Optional: OIDC Gateway
+- OIDC gateway for user authentication (optional, see OIDC-GATEWAY.md)
+- Support for external OIDC providers (GitHub, Google, etc.)
+- RBAC enforcement for Directory API access
+- Envoy-based authentication and authorization
+
 
 ## Prerequisites
 
@@ -109,6 +115,10 @@ terraform plan
 ```bash
 terraform apply
 ```
+
+## Optional: OIDC Gateway
+
+For user authentication and authorization, you can optionally deploy the OIDC gateway. See [OIDC-GATEWAY.md](OIDC-GATEWAY.md) for configuration details.
 
 ## Join the Public Federation
 

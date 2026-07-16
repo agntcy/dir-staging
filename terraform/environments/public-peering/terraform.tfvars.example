@@ -55,3 +55,15 @@ dir_federation_peers = [{
 # reconciler_regsync_timeout = "30m"
 # reconciler_indexer_enabled = true
 # reconciler_indexer_interval = "30m"
+
+# OIDC Gateway configuration (optional)
+# Enables user authentication via external OIDC providers (GitHub, Google, etc.)
+# The gateway validates tokens and enforces RBAC before forwarding to Directory API
+# oidc_gateway_enabled = false  # Set to true to enable OIDC gateway
+# oidc_gateway_chart_version = "v1.0.0"
+# oidc_github_enabled = true  # Enable GitHub Actions OIDC
+# oidc_google_enabled = false  # Enable Google OAuth
+# oidc_admin_principals = ["oidc:github:your-username"]  # Users with full admin access
+# oidc_viewer_principals = ["*"]  # All authenticated users have read access
+# oidc_ci_writer_principals = ["oidc:github:repo:your-org/your-repo:workflow:*.yml"]  # CI workflows with write access
+# oidc_ingress_enabled = true  # Expose gateway via ingress
