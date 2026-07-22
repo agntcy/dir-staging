@@ -78,7 +78,7 @@ variable "zot_pvc_size" {
 }
 
 variable "federates_with" {
-  description = "List of trust domains to federate with via SPIRE. These are configured in SPIRE's controllerManager.identities.clusterSPIFFEIDs.default.federatesWith field. Example: [\"spire.ads.outshift.io\"] for production public directory."
+  description = "List of trust domains to federate with via SPIRE. These are configured in SPIRE's controllerManager.identities.clusterSPIFFEIDs.default.federatesWith field."
   type        = list(string)
   default     = []
 }
@@ -94,6 +94,24 @@ variable "dir_federation_peers" {
     })
   }))
   default = []
+}
+
+variable "dir_routing_bootstrap_peers" {
+  description = "Routing bootstrap peers for the DIR node. If empty, uses the Outshift testbed bootstrap."
+  type        = list(string)
+  default     = []
+}
+
+variable "routing_autosync_enabled" {
+  description = "Enable DHT-based record + referrer autosync. When enabled, only records announced by a peer in peerlist are pulled and ingested locally."
+  type        = bool
+  default     = false
+}
+
+variable "routing_autosync_peerlist" {
+  description = "List of trusted source peers (by libp2p peer ID) for autosync. Only used when routing_autosync_enabled is true."
+  type        = list(string)
+  default     = []
 }
 
 variable "authz_policies_csv" {

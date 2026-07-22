@@ -77,6 +77,20 @@ locals {
     ]
   ])) : ""
 
+  # Default routing bootstrap peers if none provided
+  default_routing_bootstrap_peers = [
+    "/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu"
+  ]
+
+  routing_bootstrap_peers = length(var.routing_bootstrap_peers) > 0 ? var.routing_bootstrap_peers : local.default_routing_bootstrap_peers
+
+  # Manually construct autosync YAML with proper indentation
+  autosync_yaml = var.routing_autosync_enabled ? join("\n", flatten([
+    ["      enabled: true"],
+    ["      peerlist:"],
+    [for peer in var.routing_autosync_peerlist : "        - ${peer}"]
+  ])) : "      enabled: false"
+
   dir_values = templatefile("${path.module}/values/dir.yaml.tftpl", {
     apiserver_image_tag         = var.dir_chart_version
     trust_domain                = var.trust_domain
@@ -86,6 +100,8 @@ locals {
     zot_pvc_size                = var.zot_pvc_size
     federation_yaml             = local.federation_yaml
     authz_policies_csv          = local.authz_policies_yaml
+    routing_bootstrap_peers     = local.routing_bootstrap_peers
+    routing_autosync_yaml       = local.autosync_yaml
     reconciler_enabled          = var.reconciler_enabled
     reconciler_image_tag        = var.reconciler_image_tag
     reconciler_regsync_enabled  = var.reconciler_regsync_enabled

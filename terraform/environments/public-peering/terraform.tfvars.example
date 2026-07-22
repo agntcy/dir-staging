@@ -16,7 +16,7 @@ gke_cluster_name = "agntcy"
 cluster_name = "public"
 machine_type = "n2-standard-4"
 acme_email = "alex.smith@example.com"
-dir_chart_version = "v1.5.0"
+dir_chart_version = "v1.6.0"
 zot_pvc_size = "50Gi"
 
 # OIDC Gateway configuration (optional)
@@ -32,7 +32,6 @@ zot_pvc_size = "50Gi"
 # oidc_ingress_enabled = true  # Expose gateway via ingress
 
 # Federation configuration - list of trust domains to federate with
-# Example: ["spire.ads.outshift.io"] for production public directory
 federates_with = ["spire.ads.outshift.io"]
 
 # DIR-level federation peers configuration
@@ -45,6 +44,16 @@ dir_federation_peers = [{
     type = "https_web"
   }
 }]
+
+# Routing bootstrap peers for P2P network
+dir_routing_bootstrap_peers = [
+  "/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu"
+]
+
+# Routing autosync configuration (optional)
+# Enables DHT-based record + referrer autosync from trusted peers
+# routing_autosync_enabled = true
+# routing_autosync_peerlist = ["12D3KooW...peerID1", "12D3KooW...peerID2"]
 
 # Authorization policies for DIR apiserver (optional)
 # If not specified, sensible defaults will be used that allow federation

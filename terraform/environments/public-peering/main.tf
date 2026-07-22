@@ -72,6 +72,9 @@ module "public_dir" {
   zot_pvc_size                = var.zot_pvc_size
   federation_peers            = var.dir_federation_peers
   authz_policies_csv          = var.authz_policies_csv
+  routing_bootstrap_peers     = var.dir_routing_bootstrap_peers
+  routing_autosync_enabled    = var.routing_autosync_enabled
+  routing_autosync_peerlist   = var.routing_autosync_peerlist
   reconciler_enabled          = var.reconciler_enabled
   reconciler_image_tag        = var.reconciler_image_tag != "" ? var.reconciler_image_tag : var.dir_chart_version
   reconciler_regsync_enabled  = var.reconciler_regsync_enabled

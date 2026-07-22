@@ -39,10 +39,14 @@ ${authz_policies_csv}
       provider: oci
     routing:
       bootstrap_peers:
-        - /dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu
+%{ for peer in routing_bootstrap_peers ~}
+        - ${peer}
+%{ endfor ~}
       gossipsub:
         enabled: true
       listen_address: /ip4/0.0.0.0/tcp/5555
+      autosync:
+${routing_autosync_yaml}
 
   # P2P Routing service configuration for production deployment
   routingService:
