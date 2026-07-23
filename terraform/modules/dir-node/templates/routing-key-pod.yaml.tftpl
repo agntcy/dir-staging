@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dir-key-generator
+  namespace: ${namespace}
+spec:
+  serviceAccountName: dir-key-generator
+  restartPolicy: Never
+  initContainers:
+    - name: download-dirctl
+      image: alpine:3.20
+      command: [sh, -c]
+      args:
+        - |
+          set -eu
+          apk add --no-cache curl
+          curl -fsSL -o /shared/dirctl \
+            https://github.com/agntcy/dir/releases/download/v1.6.1/dirctl-linux-amd64
+          chmod +x /shared/dirctl
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+  containers:
+    - name: key-generator
+      image: bitnami/kubectl:latest
+      command: [sh, -c]
+      args:
+        - |
+          set -eu
+          
+          # Add dirctl to PATH
+          export PATH="/shared:$PATH"
+          
+          # Set HOME to writable directory for dirctl config
+          export HOME=/tmp
+          
+          # Check if secret already exists
+          if kubectl get secret dir -n ${namespace} >/dev/null 2>&1; then
+            echo "Secret 'dir' already exists, skipping key generation"
+            exit 0
+          fi
+          
+          # Generate routing key
+          echo "Generating routing key..."
+          dirctl network init --output /tmp/node.privkey
+          
+          # Create Kubernetes secret
+          echo "Creating Kubernetes secret..."
+          kubectl create secret generic dir \
+            --from-file=node.privkey=/tmp/node.privkey \
+            -n ${namespace}
+          
+          echo "Secret created successfully"
+          echo "Key generation complete"
+      volumeMounts:
+        - name: shared
+          mountPath: /shared
+  volumes:
+    - name: shared
+      emptyDir: {}

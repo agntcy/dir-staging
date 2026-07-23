@@ -15,6 +15,16 @@ ${federation_yaml}
   authz_policies_csv: |
 ${authz_policies_csv}
 
+  extraVolumes:
+  - name: dir-routing-key
+    secret:
+      secretName: dir
+
+  extraVolumeMounts:
+  - name: dir-routing-key
+    mountPath: /var/lib/routing/node.privkey
+    subPath: node.privkey
+
   config:
     trustDomain: ${trust_domain}
     authn:
@@ -45,6 +55,7 @@ ${authz_policies_csv}
       gossipsub:
         enabled: true
       listen_address: /ip4/0.0.0.0/tcp/5555
+      key_path: /var/lib/routing/node.privkey
       autosync:
 ${routing_autosync_yaml}
 

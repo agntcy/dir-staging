@@ -16,7 +16,7 @@ gke_cluster_name = "agntcy"
 cluster_name = "public"
 machine_type = "n2-standard-4"
 acme_email = "alex.smith@example.com"
-dir_chart_version = "v1.6.0"
+dir_chart_version = "v1.6.1"
 zot_pvc_size = "50Gi"
 
 # OIDC Gateway configuration (optional)

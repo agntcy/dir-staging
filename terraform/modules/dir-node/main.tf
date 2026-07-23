@@ -37,6 +37,81 @@ resource "kubernetes_secret" "dir_credentials" {
   depends_on = [kubectl_manifest.namespace]
 }
 
+# --- Routing key generation pod ---
+# Pod to generate DIR routing key and create Kubernetes secret
+# Uses bitnami/kubectl image (lightweight, has kubectl pre-installed)
+# Downloads dirctl binary via init container
+resource "kubectl_manifest" "routing_key_serviceaccount" {
+  yaml_body = yamlencode({
+    apiVersion = "v1"
+    kind       = "ServiceAccount"
+    metadata = {
+      name      = "dir-key-generator"
+      namespace = var.namespace
+    }
+  })
+
+  depends_on = [kubectl_manifest.namespace]
+}
+
+resource "kubectl_manifest" "routing_key_role" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "Role"
+    metadata = {
+      name      = "dir-key-generator"
+      namespace = var.namespace
+    }
+    rules = [
+      {
+        apiGroups = [""]
+        resources = ["secrets"]
+        verbs     = ["create", "get"]
+      }
+    ]
+  })
+
+  depends_on = [kubectl_manifest.namespace]
+}
+
+resource "kubectl_manifest" "routing_key_rolebinding" {
+  yaml_body = yamlencode({
+    apiVersion = "rbac.authorization.k8s.io/v1"
+    kind       = "RoleBinding"
+    metadata = {
+      name      = "dir-key-generator"
+      namespace = var.namespace
+    }
+    subjects = [
+      {
+        kind      = "ServiceAccount"
+        name      = "dir-key-generator"
+        namespace = var.namespace
+      }
+    ]
+    roleRef = {
+      kind     = "Role"
+      name     = "dir-key-generator"
+      apiGroup = "rbac.authorization.k8s.io"
+    }
+  })
+
+  depends_on = [kubectl_manifest.namespace]
+}
+
+resource "kubectl_manifest" "routing_key_pod" {
+  yaml_body = templatefile("${path.module}/templates/routing-key-pod.yaml.tftpl", {
+    namespace = var.namespace
+  })
+
+  depends_on = [
+    kubectl_manifest.namespace,
+    kubectl_manifest.routing_key_serviceaccount,
+    kubectl_manifest.routing_key_role,
+    kubectl_manifest.routing_key_rolebinding,
+  ]
+}
+
 # Create the namespace ourselves so the Secret can land before the chart needs it.
 # helm_release.dir has create_namespace = false because we own it here.
 resource "kubectl_manifest" "namespace" {
@@ -132,5 +207,6 @@ resource "helm_release" "dir" {
   depends_on = [
     kubectl_manifest.namespace,
     kubernetes_secret.dir_credentials,
+    kubectl_manifest.routing_key_pod,
   ]
 }
