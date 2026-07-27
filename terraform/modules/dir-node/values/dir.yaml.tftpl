@@ -56,8 +56,33 @@ ${authz_policies_csv}
         enabled: true
       listen_address: /ip4/0.0.0.0/tcp/5555
       key_path: /var/lib/routing/node.privkey
+      datastore_dir: /var/lib/routing-datastore
       autosync:
 ${routing_autosync_yaml}
+
+  # Create PVC for routing/cache data persistence
+  # When enabled, routing data persists across pod restarts and crashes
+  # IMPORTANT: Requires strategy.type to be Recreate to avoid BadgerDB lock conflicts
+  pvc:
+    create: true
+    storageClassName: standard-rwo
+    size: 1G
+
+  # Pod security context - ensures proper permissions for PVC mounts
+  podSecurityContext:
+    fsGroup: 65532
+
+  # Container security context
+  securityContext:
+    runAsUser: 65532
+    runAsNonRoot: true
+
+  # Deployment strategy
+  # Use Recreate to prevent lock conflicts during updates
+  # BadgerDB (routing) uses exclusive file locks; RollingUpdate would cause pod crash
+  # IMPORTANT: Required when using PVCs to avoid BadgerDB lock conflicts
+  strategy:
+    type: Recreate
 
   # P2P Routing service configuration for production deployment
   routingService:

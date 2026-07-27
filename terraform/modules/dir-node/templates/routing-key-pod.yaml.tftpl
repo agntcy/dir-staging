@@ -14,7 +14,8 @@ spec:
         - |
           set -eu
           apk add --no-cache curl
-          curl -fsSL -o /shared/dirctl \
+          curl -fsSL --retry 3 --retry-delay 10 --connect-timeout 30 \
+            -o /shared/dirctl \
             https://github.com/agntcy/dir/releases/download/v1.6.1/dirctl-linux-amd64
           chmod +x /shared/dirctl
       volumeMounts:
