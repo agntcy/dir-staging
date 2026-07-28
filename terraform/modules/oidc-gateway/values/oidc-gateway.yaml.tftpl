@@ -121,20 +121,7 @@ authServer:
         principals: ${jsonencode(ci_writer_principals)}
 
 ingress:
-  enabled: ${ingress_enabled}
-  className: ${ingress_class}
-  host: "${gateway_fqdn}"
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    external-dns.alpha.kubernetes.io/hostname: "${gateway_fqdn}"
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
-    nginx.ingress.kubernetes.io/grpc-backend: "true"
-%{ for key, value in ingress_annotations ~}
-    ${key}: "${value}"
-%{ endfor ~}
-  tls:
-    enabled: true
-    secretName: "oidc-gateway-tls"
+  enabled: false
   oidc:
     enabled: ${ingress_enabled}
     className: ${ingress_class}
