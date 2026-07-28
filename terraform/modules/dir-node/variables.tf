@@ -40,9 +40,9 @@ variable "namespace" {
 }
 
 variable "dir_chart_version" {
-  description = "AGNTCY dir umbrella chart version. v1.5.0 is current stable as of 2026-06-18. The apiserver image tag (ghcr.io/agntcy/dir-apiserver) tracks this value 1:1."
+  description = "AGNTCY dir umbrella chart version. v1.6.1 is current stable as of 2026-07-27. The apiserver image tag (ghcr.io/agntcy/dir-apiserver) tracks this value 1:1."
   type        = string
-  default     = "v1.5.0"
+  default     = "v1.6.1"
 }
 
 variable "zot_pvc_size" {
@@ -128,4 +128,22 @@ variable "reconciler_indexer_interval" {
   description = "Interval for the indexer to rebuild search indexes (e.g., '30m', '1h')."
   type        = string
   default     = "30m"
+}
+
+variable "reconciler_regsync_authn_mode" {
+  description = "Authentication mode for regsync remote directory connections: x509, jwt, or jwt-tls."
+  type        = string
+  default     = "x509"
+}
+
+variable "reconciler_regsync_authn_socket_path" {
+  description = "SPIFFE Workload API socket path used by regsync for x509, jwt, or jwt-tls auth."
+  type        = string
+  default     = "unix:///run/spire/agent-sockets/api.sock"
+}
+
+variable "reconciler_regsync_authn_audiences" {
+  description = "Expected JWT audiences for regsync (required for jwt and jwt-tls modes)."
+  type        = list(string)
+  default     = []
 }

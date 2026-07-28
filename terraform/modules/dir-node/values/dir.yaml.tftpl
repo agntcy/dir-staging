@@ -164,9 +164,10 @@ ${routing_autosync_yaml}
         interval: ${reconciler_regsync_interval}
         timeout: ${reconciler_regsync_timeout}
         authn:
-          enabled: true
-          mode: x509
-          socket_path: unix:///run/spire/agent-sockets/api.sock
+          enabled: ${reconciler_regsync_authn_mode != ""}
+          mode: ${reconciler_regsync_authn_mode}
+          socket_path: "${reconciler_regsync_authn_socket_path}"
+          audiences: ${jsonencode(reconciler_regsync_authn_audiences)}
       indexer:
         enabled: ${reconciler_indexer_enabled}
         interval: ${reconciler_indexer_interval}

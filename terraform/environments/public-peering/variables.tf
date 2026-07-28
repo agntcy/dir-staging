@@ -66,9 +66,9 @@ variable "cluster_name" {
 }
 
 variable "dir_chart_version" {
-  description = "AGNTCY dir umbrella chart version. v1.3.0 is current stable as of 2026-05-13. The apiserver image tag (ghcr.io/agntcy/dir-apiserver) tracks this value 1:1."
+  description = "AGNTCY dir umbrella chart version. v1.6.1 is current stable as of 2026-07-27. The apiserver image tag (ghcr.io/agntcy/dir-apiserver) tracks this value 1:1."
   type        = string
-  default     = "v1.5.0"
+  default     = "v1.6.1"
 }
 
 variable "zot_pvc_size" {
@@ -162,6 +162,24 @@ variable "reconciler_indexer_interval" {
   default     = "30m"
 }
 
+variable "reconciler_regsync_authn_mode" {
+  description = "Authentication mode for regsync remote directory connections: x509, jwt, or jwt-tls."
+  type        = string
+  default     = "x509"
+}
+
+variable "reconciler_regsync_authn_socket_path" {
+  description = "SPIFFE Workload API socket path used by regsync for x509, jwt, or jwt-tls auth."
+  type        = string
+  default     = "unix:///run/spire/agent-sockets/api.sock"
+}
+
+variable "reconciler_regsync_authn_audiences" {
+  description = "Expected JWT audiences for regsync (required for jwt and jwt-tls modes)."
+  type        = list(string)
+  default     = []
+}
+
 # OIDC Gateway configuration
 variable "oidc_gateway_enabled" {
   description = "Enable OIDC gateway deployment for user authentication."
@@ -172,7 +190,7 @@ variable "oidc_gateway_enabled" {
 variable "oidc_gateway_chart_version" {
   description = "OIDC gateway Helm chart version."
   type        = string
-  default     = "v1.0.0"
+  default     = "v1.1.2"
 }
 
 variable "oidc_github_enabled" {
@@ -215,4 +233,34 @@ variable "oidc_ingress_enabled" {
   description = "Enable ingress for external access to the OIDC gateway."
   type        = bool
   default     = true
+}
+
+variable "oidc_jwt_svid_allow_missing_or_failed" {
+  description = "Allow Envoy to pass JWTs that don't match an OIDC provider to ext_authz for SPIFFE JWT-SVID validation."
+  type        = bool
+  default     = false
+}
+
+variable "oidc_spiffe_jwt_enabled" {
+  description = "Enable SPIFFE JWT-SVID validation in the OIDC gateway authz server."
+  type        = bool
+  default     = false
+}
+
+variable "oidc_spiffe_jwt_socket_path" {
+  description = "SPIFFE Workload API socket path for the OIDC gateway authz server."
+  type        = string
+  default     = "unix:///run/spire/agent-sockets/api.sock"
+}
+
+variable "oidc_spiffe_jwt_audiences" {
+  description = "Expected audiences for SPIFFE JWT-SVID validation in the OIDC gateway authz server."
+  type        = list(string)
+  default     = []
+}
+
+variable "oidc_spiffe_jwt_federates_with" {
+  description = "Federated trust domains for the OIDC gateway authz-server ClusterSPIFFEID."
+  type        = list(string)
+  default     = []
 }

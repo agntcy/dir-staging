@@ -21,11 +21,18 @@ zot_pvc_size = "50Gi"
 
 # OIDC Gateway configuration (optional)
 # Enables user authentication via external OIDC providers (GitHub, Google, etc.)
-# The gateway validates tokens and enforces RBAC before forwarding to Directory API
+# The gateway validates tokens and enforces RBAC before forwarding to Directory API.
+# Set oidc_spiffe_jwt_enabled = true to allow the authz server to validate SPIFFE JWT-SVIDs
+# from federated reconcilers (e.g. dir-reconciler in the dev trust domain).
 # oidc_gateway_enabled = false  # Set to true to enable OIDC gateway
-# oidc_gateway_chart_version = "v1.0.0"
+# oidc_gateway_chart_version = "v1.1.2"
 # oidc_github_enabled = true  # Enable GitHub Actions OIDC
 # oidc_google_enabled = true  # Enable Google OAuth
+# oidc_jwt_svid_allow_missing_or_failed = true  # Allow unmatched JWTs to pass to authz for JWT-SVID validation
+# oidc_spiffe_jwt_enabled = false  # Enable SPIFFE JWT-SVID validation in authz server
+# oidc_spiffe_jwt_socket_path = "unix:///run/spire/agent-sockets/api.sock"
+# oidc_spiffe_jwt_audiences = ["spiffe://example.agntcy.testbed/dir-apiserver"]
+# oidc_spiffe_jwt_federates_with = ["dell.agntcy.dev"]
 # oidc_admin_principals = ["oidc:github:your-username"]  # Users with full admin access
 # oidc_viewer_principals = ["*"]  # All authenticated users have read access
 # oidc_ci_writer_principals = ["oidc:github:repo:your-org/your-repo:workflow:*.yml"]  # CI workflows with write access
@@ -70,9 +77,12 @@ dir_routing_bootstrap_peers = [
 # The reconciler syncs records and OCI registry content from federated peers
 # Defaults are production-ready based on AGNTCY recommendations
 # reconciler_enabled = true
-# reconciler_image_tag = "v1.3.0"
+# reconciler_image_tag = "v1.6.1"
 # reconciler_regsync_enabled = true
 # reconciler_regsync_interval = "1m"
 # reconciler_regsync_timeout = "30m"
+# reconciler_regsync_authn_mode = "x509"  # x509, jwt, or jwt-tls
+# reconciler_regsync_authn_socket_path = "unix:///run/spire/agent-sockets/api.sock"
+# reconciler_regsync_authn_audiences = ["spiffe://example.agntcy.testbed/dir-apiserver"]
 # reconciler_indexer_enabled = true
 # reconciler_indexer_interval = "30m"

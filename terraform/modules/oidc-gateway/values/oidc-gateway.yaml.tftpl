@@ -44,8 +44,8 @@ envoy:
 %{ endfor ~}
     jwksTimeout: 5s
     jwksCacheSeconds: 300
-    allowMissing: true
-    allowFailed: true
+    jwtSvid:
+      allowMissingOrFailed: ${jwt_svid_allow_missing_or_failed}
 
   spiffe:
     enabled: true
@@ -65,7 +65,7 @@ authServer:
 
   image:
     repository: ghcr.io/agntcy/oidc-gateway
-    tag: v1.0.0
+    tag: "${chart_version}"
     pullPolicy: IfNotPresent
 
   config:
@@ -90,6 +90,11 @@ authServer:
         provider: "${custom_issuer.issuer}"
         authFamily: "oidc"
 %{ endfor ~}
+    spiffeJwt:
+      enabled: ${auth_server_spiffe_jwt_enabled}
+      socketPath: "${auth_server_spiffe_jwt_socket_path}"
+      audiences: ${jsonencode(auth_server_spiffe_jwt_audiences)}
+      federatesWith: ${jsonencode(auth_server_spiffe_jwt_federates_with)}
     denyList: []
     publicPaths:
       - "/healthz"
@@ -130,3 +135,18 @@ ingress:
   tls:
     enabled: true
     secretName: "oidc-gateway-tls"
+  oidc:
+    enabled: ${ingress_enabled}
+    className: ${ingress_class}
+    host: "${gateway_fqdn}"
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      external-dns.alpha.kubernetes.io/hostname: "${gateway_fqdn}"
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+      nginx.ingress.kubernetes.io/grpc-backend: "true"
+%{ for key, value in ingress_annotations ~}
+      ${key}: "${value}"
+%{ endfor ~}
+    tls:
+      enabled: true
+      secretName: "oidc-gateway-tls"

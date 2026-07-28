@@ -177,3 +177,33 @@ variable "auth_server_replica_count" {
   type        = number
   default     = 1
 }
+
+variable "jwt_svid_allow_missing_or_failed" {
+  description = "Allow Envoy to pass JWTs that don't match an OIDC provider to ext_authz for SPIFFE JWT-SVID validation."
+  type        = bool
+  default     = false
+}
+
+variable "auth_server_spiffe_jwt_enabled" {
+  description = "Enable SPIFFE JWT-SVID validation in the authz server."
+  type        = bool
+  default     = false
+}
+
+variable "auth_server_spiffe_jwt_socket_path" {
+  description = "SPIFFE Workload API socket path for the authz server."
+  type        = string
+  default     = "unix:///run/spire/agent-sockets/api.sock"
+}
+
+variable "auth_server_spiffe_jwt_audiences" {
+  description = "Expected audiences for SPIFFE JWT-SVID validation."
+  type        = list(string)
+  default     = []
+}
+
+variable "auth_server_spiffe_jwt_federates_with" {
+  description = "Federated trust domains for the authz server ClusterSPIFFEID."
+  type        = list(string)
+  default     = []
+}

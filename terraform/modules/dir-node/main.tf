@@ -30,8 +30,8 @@ resource "kubernetes_secret" "dir_credentials" {
 
   data = {
     "postgres-password" = random_password.postgres.result
-    "password"         = random_password.postgres.result
-    "zot-htpasswd"     = "admin:${htpasswd_password.zot.bcrypt}"
+    "password"          = random_password.postgres.result
+    "zot-htpasswd"      = "admin:${htpasswd_password.zot.bcrypt}"
   }
 
   depends_on = [kubectl_manifest.namespace]
@@ -167,23 +167,26 @@ locals {
   ])) : "      enabled: false"
 
   dir_values = templatefile("${path.module}/values/dir.yaml.tftpl", {
-    apiserver_image_tag         = var.dir_chart_version
-    trust_domain                = var.trust_domain
-    base_fqdn                   = var.base_fqdn
-    namespace                   = var.namespace
-    credentials_secret_name     = local.credentials_secret_name
-    zot_pvc_size                = var.zot_pvc_size
-    federation_yaml             = local.federation_yaml
-    authz_policies_csv          = local.authz_policies_yaml
-    routing_bootstrap_peers     = local.routing_bootstrap_peers
-    routing_autosync_yaml       = local.autosync_yaml
-    reconciler_enabled          = var.reconciler_enabled
-    reconciler_image_tag        = var.reconciler_image_tag
-    reconciler_regsync_enabled  = var.reconciler_regsync_enabled
-    reconciler_regsync_interval = var.reconciler_regsync_interval
-    reconciler_regsync_timeout  = var.reconciler_regsync_timeout
-    reconciler_indexer_enabled  = var.reconciler_indexer_enabled
-    reconciler_indexer_interval = var.reconciler_indexer_interval
+    apiserver_image_tag                  = var.dir_chart_version
+    trust_domain                         = var.trust_domain
+    base_fqdn                            = var.base_fqdn
+    namespace                            = var.namespace
+    credentials_secret_name              = local.credentials_secret_name
+    zot_pvc_size                         = var.zot_pvc_size
+    federation_yaml                      = local.federation_yaml
+    authz_policies_csv                   = local.authz_policies_yaml
+    routing_bootstrap_peers              = local.routing_bootstrap_peers
+    routing_autosync_yaml                = local.autosync_yaml
+    reconciler_enabled                   = var.reconciler_enabled
+    reconciler_image_tag                 = var.reconciler_image_tag
+    reconciler_regsync_enabled           = var.reconciler_regsync_enabled
+    reconciler_regsync_interval          = var.reconciler_regsync_interval
+    reconciler_regsync_timeout           = var.reconciler_regsync_timeout
+    reconciler_indexer_enabled           = var.reconciler_indexer_enabled
+    reconciler_indexer_interval          = var.reconciler_indexer_interval
+    reconciler_regsync_authn_mode        = var.reconciler_regsync_authn_mode
+    reconciler_regsync_authn_socket_path = var.reconciler_regsync_authn_socket_path
+    reconciler_regsync_authn_audiences   = var.reconciler_regsync_authn_audiences
   })
 }
 
