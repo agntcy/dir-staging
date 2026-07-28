@@ -41,10 +41,10 @@ ${authz_policies_csv}
     store:
       oci:
         auth_config:
-          insecure: "true"
+          insecure: false
           username: "admin"
           password: "admin"
-        registry_address: "dir-zot.${namespace}.svc.cluster.local:5000"
+        registry_address: "zot.${base_fqdn}:443"
         repository_name: dir
       provider: oci
     routing:
@@ -155,10 +155,12 @@ ${routing_autosync_yaml}
           database: dir
           ssl_mode: disable
       local_registry:
-        registry_address: "dir-zot.${namespace}.svc.cluster.local:5000"
+        registry_address: "zot.${base_fqdn}:443"
         repository_name: ""
         auth_config:
-          insecure: true
+          insecure: false
+          username: "admin"
+          password: "admin"
       regsync:
         enabled: ${reconciler_regsync_enabled}
         interval: ${reconciler_regsync_interval}
