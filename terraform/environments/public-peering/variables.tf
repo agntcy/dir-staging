@@ -77,6 +77,18 @@ variable "zot_pvc_size" {
   default     = "50Gi"
 }
 
+variable "http_gateway_enabled" {
+  description = "Enable the HTTP gateway and embedded AI Catalog UI."
+  type        = bool
+  default     = false
+}
+
+variable "http_gateway_catalog_title" {
+  description = "Display title for the embedded AI Catalog UI."
+  type        = string
+  default     = "AI Catalog"
+}
+
 variable "federates_with" {
   description = "List of trust domains to federate with via SPIRE. These are configured in SPIRE's controllerManager.identities.clusterSPIFFEIDs.default.federatesWith field."
   type        = list(string)

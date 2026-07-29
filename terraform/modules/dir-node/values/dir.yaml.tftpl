@@ -2,6 +2,28 @@ apiserver:
   image:
     tag: "${apiserver_image_tag}"
 
+  httpGateway:
+    enabled: ${http_gateway_enabled}
+    publicURL: "https://${http_gateway_fqdn}"
+    catalogTitle: "${http_gateway_catalog_title}"
+    port: 8889
+    service:
+      type: ClusterIP
+    ingress:
+      enabled: ${http_gateway_enabled}
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - host: ${http_gateway_fqdn}
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - hosts:
+            - ${http_gateway_fqdn}
+          secretName: http-gateway-tls
+
   spire:
     enabled: true
     className: "dir-spire"

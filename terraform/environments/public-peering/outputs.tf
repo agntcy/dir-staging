@@ -29,6 +29,11 @@ output "public_dir_zot_url" {
   value       = module.public_dir.zot_url
 }
 
+output "public_dir_catalog_url" {
+  description = "AI Catalog UI endpoint (HTTP gateway)."
+  value       = var.http_gateway_enabled ? module.public_dir.catalog_url : null
+}
+
 output "public_dir_routing_url" {
   description = "P2P routing endpoint (LoadBalancer TCP 5555 for federation peer discovery)."
   value       = module.public_dir.routing_url

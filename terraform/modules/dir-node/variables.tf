@@ -51,6 +51,18 @@ variable "zot_pvc_size" {
   default     = "50Gi"
 }
 
+variable "http_gateway_enabled" {
+  description = "Enable the HTTP gateway and embedded AI Catalog UI."
+  type        = bool
+  default     = false
+}
+
+variable "http_gateway_catalog_title" {
+  description = "Display title for the embedded AI Catalog UI."
+  type        = string
+  default     = "AI Catalog"
+}
+
 variable "federation_peers" {
   description = "List of federation peers to configure in the DIR apiserver. Each peer should have className, trustDomain, bundleEndpointURL, and bundleEndpointProfile with type. Example: [{ className = \"dir-spire\", trustDomain = \"spire.ads.outshift.io\", bundleEndpointURL = \"https://spire.ads.outshift.io\", bundleEndpointProfile = { type = \"https_web\" } }]"
   type = list(object({

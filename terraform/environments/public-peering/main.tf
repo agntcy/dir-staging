@@ -70,6 +70,8 @@ module "public_dir" {
   cluster_name                         = var.cluster_name
   dir_chart_version                    = var.dir_chart_version
   zot_pvc_size                         = var.zot_pvc_size
+  http_gateway_enabled                 = var.http_gateway_enabled
+  http_gateway_catalog_title           = var.http_gateway_catalog_title
   federation_peers                     = var.dir_federation_peers
   authz_policies_csv                   = var.authz_policies_csv
   routing_bootstrap_peers              = var.dir_routing_bootstrap_peers

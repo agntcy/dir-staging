@@ -18,6 +18,11 @@ output "routing_url" {
   value       = "${local.routing_fqdn}:5555"
 }
 
+output "catalog_url" {
+  description = "Public HTTPS URL of the AI Catalog UI (HTTP gateway)."
+  value       = var.http_gateway_enabled ? "https://${local.http_gateway_fqdn}" : null
+}
+
 output "credentials_secret_name" {
   description = "Name of the K8s secret holding postgres-password + zot-htpasswd."
   value       = local.credentials_secret_name
