@@ -5,7 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v1.6.2
+    tag: v1.7.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -207,7 +207,7 @@ apiserver:
   # Reconciler configuration
   reconciler:
     image:
-      tag: v1.6.2
+      tag: v1.7.0
 
   # PostgreSQL subchart configuration
   # Deploys PostgreSQL alongside the apiserver
