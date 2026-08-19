@@ -216,7 +216,7 @@ apiserver:
     enabled: true
     image:
       tag: "latest"
-      digest: "sha256:7651d7f24aad83fe68a222f7f20eded10d325c96ebee285ca5bf8162eddcba64"
+      digest: "sha256:d92a6bbf5184e327301856457e35cefcc32e19158e46a4012929e20daa9c178d"
     auth:
       username: "dir"
       password: "dir"
@@ -267,7 +267,7 @@ apiserver:
   # Zot registry configuration (subchart)
   zot:
     image:
-      tag: v2.1.17
+      tag: v2.1.20
 
     # Resources: use chart default for Kind (allows flexible scheduling)
     resources: {}
