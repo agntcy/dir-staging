@@ -1,0 +1,5 @@
+className: dir-spire
+trustDomain: meetloyd.com
+bundleEndpointURL: https://spire.meetloyd.com
+bundleEndpointProfile:
+  type: https_web
