@@ -1,0 +1,197 @@
+apiserver:
+  image:
+    tag: "${apiserver_image_tag}"
+
+  httpGateway:
+    enabled: ${http_gateway_enabled}
+    publicURL: "https://${http_gateway_fqdn}"
+    catalogTitle: "${http_gateway_catalog_title}"
+    port: 8889
+    service:
+      type: ClusterIP
+    ingress:
+      enabled: ${http_gateway_enabled}
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - host: ${http_gateway_fqdn}
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - hosts:
+            - ${http_gateway_fqdn}
+          secretName: http-gateway-tls
+
+  spire:
+    enabled: true
+    className: "dir-spire"
+    useCSIDriver: true
+    dnsNameTemplates:
+      - "api.${base_fqdn}"
+%{ if length(federation_yaml) > 0 }
+    federation:
+${federation_yaml}
+%{ endif }
+  authz_policies_csv: |
+${authz_policies_csv}
+
+  extraVolumes:
+  - name: dir-routing-key
+    secret:
+      secretName: dir
+
+  extraVolumeMounts:
+  - name: dir-routing-key
+    mountPath: /var/lib/routing/node.privkey
+    subPath: node.privkey
+
+  config:
+    trustDomain: ${trust_domain}
+    authn:
+      enabled: true
+    authz:
+      enabled: true
+    database:
+      type: postgres
+      postgres:
+        host: ""
+        port: 5432
+        database: dir
+        ssl_mode: disable
+    store:
+      oci:
+        auth_config:
+          insecure: false
+          username: "admin"
+          password: "admin"
+        registry_address: "zot.${base_fqdn}:443"
+        repository_name: dir
+      provider: oci
+    routing:
+      bootstrap_peers:
+%{ for peer in routing_bootstrap_peers ~}
+        - ${peer}
+%{ endfor ~}
+      gossipsub:
+        enabled: true
+      listen_address: /ip4/0.0.0.0/tcp/5555
+      key_path: /var/lib/routing/node.privkey
+      datastore_dir: /var/lib/routing-datastore
+      autosync:
+${routing_autosync_yaml}
+
+  # Create PVC for routing/cache data persistence
+  # When enabled, routing data persists across pod restarts and crashes
+  # IMPORTANT: Requires strategy.type to be Recreate to avoid BadgerDB lock conflicts
+  pvc:
+    create: true
+    storageClassName: standard-rwo
+    size: 1G
+
+  # Pod security context - ensures proper permissions for PVC mounts
+  podSecurityContext:
+    fsGroup: 65532
+
+  # Container security context
+  securityContext:
+    runAsUser: 65532
+    runAsNonRoot: true
+
+  # Deployment strategy
+  # Use Recreate to prevent lock conflicts during updates
+  # BadgerDB (routing) uses exclusive file locks; RollingUpdate would cause pod crash
+  # IMPORTANT: Required when using PVCs to avoid BadgerDB lock conflicts
+  strategy:
+    type: Recreate
+
+  # P2P Routing service configuration for production deployment
+  routingService:
+    type: LoadBalancer
+    cloudProvider: "gcp"
+    externalTrafficPolicy: Cluster
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: "routing.${base_fqdn}"
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"
+    hosts:
+      - host: api.${base_fqdn}
+        http:
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+              backend:
+                service:
+                  name: dir-apiserver
+                  port:
+                    name: grpc
+    tls:
+      - hosts:
+          - api.${base_fqdn}
+
+  postgresql:
+    enabled: true
+    existingSecret: ${credentials_secret_name}
+
+  zot:
+    enabled: true
+    persistence:
+      enabled: true
+      size: ${zot_pvc_size}
+      storageClass: standard-rwo
+    authentication:
+      existingSecret: ${credentials_secret_name}
+      htpasswdKey: zot-htpasswd
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - host: zot.${base_fqdn}
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - hosts:
+            - zot.${base_fqdn}
+          secretName: zot-tls
+
+  reconciler:
+    enabled: ${reconciler_enabled}
+    image:
+      repository: ghcr.io/agntcy/dir-reconciler
+      tag: ${reconciler_image_tag}
+      pullPolicy: IfNotPresent
+    config:
+      database:
+        type: postgres
+        postgres:
+          host: ""
+          port: 5432
+          database: dir
+          ssl_mode: disable
+      local_registry:
+        registry_address: "zot.${base_fqdn}:443"
+        repository_name: ""
+        auth_config:
+          insecure: false
+          username: "admin"
+          password: "admin"
+      regsync:
+        enabled: ${reconciler_regsync_enabled}
+        interval: ${reconciler_regsync_interval}
+        timeout: ${reconciler_regsync_timeout}
+        authn:
+          enabled: ${reconciler_regsync_authn_mode != ""}
+          mode: ${reconciler_regsync_authn_mode}
+          socket_path: "${reconciler_regsync_authn_socket_path}"
+          audiences: ${jsonencode(reconciler_regsync_authn_audiences)}
+      indexer:
+        enabled: ${reconciler_indexer_enabled}
+        interval: ${reconciler_indexer_interval}

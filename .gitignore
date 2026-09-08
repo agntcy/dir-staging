@@ -9,3 +9,19 @@
 # Local environment and secrets
 .env
 .env.*
+
+# JetBrains IDEs
+.idea/
+
+# Terraform
+**/.terraform/*
+*.tfstate*
+*.tfvars
+*.tfvars.json
+override.tf*
+*_override.tf*
+.terraform.tfstate.lock.info
+crash*.log
+.terraformrc
+terraform.rc
+**/federation-config.yaml

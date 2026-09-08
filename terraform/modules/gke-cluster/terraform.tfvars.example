@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+
+project_id   = "REPLACE-WITH-DELL-GCP-PROJECT-ID"
+cluster_name = "REPLACE-WITH-CLUSTER-NAME"
+
+# Optional overrides:
+# region       = "us-central1"
+# machine_type = "e2-standard-4"

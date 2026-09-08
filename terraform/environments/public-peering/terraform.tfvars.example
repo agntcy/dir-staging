@@ -1,0 +1,81 @@
+# Required Variables (no defaults)
+project_id = <Google Cloud Project ID>
+acme_email = <Email for Let's Encrypt certificates>
+base_domain = <Public DNS suffix, e.g., "agntcy-research-dell.com">
+dns_project_id = <GCP project ID hosting Cloud DNS zone>
+dns_zone_name = <Cloud DNS zone resource name, e.g., "agntcy-research-dell-com">
+
+# Optional Variables (have defaults)
+region = "us-east1"
+public_trust_domain = "example.agntcy.testbed"
+gke_cluster_name = "agntcy-public"
+cluster_name = "public"
+machine_type = "n2-highcpu-4"
+dir_chart_version = "v1.6.2"
+zot_pvc_size = "50Gi"
+
+# HTTP Gateway & AI Catalog UI
+http_gateway_enabled = true
+http_gateway_catalog_title = "AI Catalog"
+
+# Managed DNS Configuration
+# The ExternalDNS GSA and IAM bindings are created automatically if external_dns_gsa_email is not set
+external_dns_gsa_email = ""  # Optional: use pre-existing GSA
+external_dns_gsa_name = "external-dns"  # Name for auto-created GSA
+
+# Federation Configuration
+federates_with = ["spire.ads.outshift.io"]
+dir_federation_peers = [{
+  className         = "dir-spire"
+  trustDomain       = "spire.ads.outshift.io"
+  bundleEndpointURL = "https://spire.ads.outshift.io"
+  bundleEndpointProfile = {
+    type = "https_web"
+  }
+}]
+dir_routing_bootstrap_peers = [
+  "/dns4/routing.ads.outshift.io/tcp/5555/p2p/12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu"
+]
+
+# Routing Autosync (optional)
+routing_autosync_enabled = true
+routing_autosync_peerlist = ["12D3KooWLf9p3cedc86xGQBaqak6rAFmQk1HxKAK1yh7umHE3amu"]
+
+# Authorization Policies (optional)
+# If not specified, sensible defaults will be used
+authz_policies_csv = <<-EOF
+  p,example.agntcy.testbed,*
+  p,*,/agntcy.dir.store.v1.StoreService/Pull
+  p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+  p,*,/agntcy.dir.store.v1.StoreService/Lookup
+  p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
+  p,*,/agntcy.dir.routing.v1.RoutingService/List
+EOF
+
+# DIR Reconciler Configuration
+reconciler_enabled = true
+reconciler_image_tag = ""  # Defaults to match dir_chart_version
+reconciler_regsync_enabled = true
+reconciler_regsync_interval = "1m"
+reconciler_regsync_timeout = "6h"
+reconciler_regsync_authn_mode = "jwt-tls"
+reconciler_regsync_authn_socket_path = "unix:///run/spire/agent-sockets/api.sock"
+reconciler_regsync_authn_audiences = ["dir"]
+reconciler_indexer_enabled = true
+reconciler_indexer_interval = "30m"
+
+# OIDC Gateway Configuration
+oidc_gateway_enabled = true
+oidc_gateway_chart_version = "v1.1.2"
+oidc_github_enabled = true
+oidc_google_enabled = true
+oidc_google_audiences = ["32555940559.apps.googleusercontent.com"]
+oidc_admin_principals = ["oidc:google:your-email@example.com"]
+oidc_viewer_principals = ["*"]
+oidc_ci_writer_principals = []
+oidc_ingress_enabled = true
+oidc_jwt_svid_allow_missing_or_failed = true
+oidc_spiffe_jwt_enabled = true
+oidc_spiffe_jwt_socket_path = "unix:///run/spire/agent-sockets/api.sock"
+oidc_spiffe_jwt_audiences = ["dir"]
+oidc_spiffe_jwt_federates_with = ["spire.ads.outshift.io"]
