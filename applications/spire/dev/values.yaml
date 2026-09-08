@@ -15,14 +15,14 @@ global:
 
 spire-server:
   image:
-    tag: "1.15.0"
+    tag: "1.15.2"
 
   federation:
     enabled: true
 
   controllerManager:
     image:
-      tag: "0.6.4"
+      tag: "0.7.0"
     className: dir-spire
 
 # This dev environment uses X.509 SPIFFE identities plus Dex/GitHub OIDC.
@@ -30,14 +30,14 @@ spire-server:
 # without the currently open high/critical Trivy findings.
 spire-agent:
   image:
-    tag: "1.15.0"
+    tag: "1.15.2"
 
 spiffe-oidc-discovery-provider:
   enabled: false
 
 spiffe-csi-driver:
   image:
-    tag: "0.2.9"
+    tag: "0.2.13"
   nodeDriverRegistrar:
     image:
       tag: "v2.17.0"
