@@ -1,0 +1,58 @@
+global:
+  spire:
+    trustDomain: ${trust_domain}
+    clusterName: ${cluster_name}
+    jwtIssuer: "oidc-discovery.${fqdn}"
+    namespaces:
+      create: false   # helm_release create_namespace handles spire-server; chart-templated Namespace conflicts with it
+    ingressControllerType: ingress-nginx
+  installAndUpgradeHooks:
+    enabled: false
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+    tls:
+      spire:
+        enabled: false
+      certManager:
+        enabled: true
+        issuer:
+          kind: ClusterIssuer
+          name: letsencrypt-prod
+          acme:
+            email: ${acme_email}
+            solvers:
+              - http01:
+                  ingress:
+                    class: nginx
+        certificate:
+          dnsNames:
+            - ${fqdn}
+    ingress:
+      enabled: false
+  controllerManager:
+    watchClassless: true
+    className: dir-spire
+    identities:
+      clusterFederatedTrustDomain:
+        enabled: true
+      clusterSPIFFEIDs:
+        default:
+          federatesWith:
+%{ for federated_domain in federates_with }            - ${federated_domain}
+%{ endfor }
+
+spiffe-oidc-discovery-provider:
+  ingress:
+    enabled: true
+    className: nginx
+    host: oidc-discovery.${fqdn}
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      external-dns.alpha.kubernetes.io/hostname: oidc-discovery.${fqdn}
+  config:
+    domains:
+      - oidc-discovery.${fqdn}

@@ -28,6 +28,7 @@ provided as-is for demonstration and testing purposes.
 | Federation Troubleshooting | [docs/dir-federation-troubleshooting.md](docs/dir-federation-troubleshooting.md) |
 | Helm / GitOps Deployment | [docs.agntcy.org/dir/getting-started](https://docs.agntcy.org/dir/getting-started/) |
 | Production Deployment | [docs.agntcy.org/dir/prod-deployment](https://docs.agntcy.org/dir/prod-deployment/) |
+| Terraform Deployment | [terraform/environments/public-peering/README.md](terraform/environments/public-peering/README.md) |
 
 ---
 

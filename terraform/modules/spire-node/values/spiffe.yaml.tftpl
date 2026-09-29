@@ -1,0 +1,33 @@
+global:
+  spire:
+    trustDomain: ${trust_domain}
+    clusterName: ${cluster_name}
+    namespaces:
+      create: false
+    ingressControllerType: other
+  installAndUpgradeHooks:
+    enabled: false
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+    tls:
+      spire:
+        enabled: true
+      certManager:
+        enabled: false
+    ingress:
+      enabled: false
+  controllerManager:
+    watchClassless: true
+    className: dir-spire
+    identities:
+      clusterFederatedTrustDomain:
+        enabled: true
+      clusterSPIFFEIDs:
+        default:
+          federatesWith:
+%{ for federated_domain in federates_with }            - ${federated_domain}
+%{ endfor }
