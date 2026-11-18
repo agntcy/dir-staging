@@ -16,6 +16,14 @@ envoy:
   # Run more than one Envoy replica for shared or public environments.
   replicaCount: 2
 
+  # Pin an exact Envoy release instead of the chart's floating
+  # distroless-v1.37-latest tag, so the image the nightly scan checks is the one
+  # deployed. 1.37 and 1.38 still ship the Debian 12 distroless base with an
+  # outdated tzdata; 1.39+ moves to Debian 13.
+  image:
+    repository: envoyproxy/envoy
+    tag: distroless-v1.40.2
+
   resources:
     requests:
       cpu: 100m
@@ -83,7 +91,7 @@ authServer:
 
   image:
     repository: ghcr.io/agntcy/oidc-gateway
-    tag: v1.1.4
+    tag: v1.1.5
     pullPolicy: IfNotPresent
 
   config:
