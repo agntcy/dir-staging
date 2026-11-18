@@ -1,0 +1,5 @@
+className: dir-spire
+trustDomain: mitdataworksai.com
+bundleEndpointURL: https://spire.mitdataworksai.com
+bundleEndpointProfile:
+  type: https_web
