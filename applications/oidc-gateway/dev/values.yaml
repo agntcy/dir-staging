@@ -91,7 +91,7 @@ authServer:
 
   image:
     repository: ghcr.io/agntcy/oidc-gateway
-    tag: v1.1.5
+    tag: v1.1.6
     pullPolicy: IfNotPresent
 
   config:
