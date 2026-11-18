@@ -5,7 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
-    tag: v1.7.0
+    tag: v1.9.0
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -62,12 +62,11 @@ apiserver:
   config:
     listen_address: "0.0.0.0:8888"
 
-    # OASF validation configuration (REFACTORED in v0.5.6)
-    # Nested structure for better organization
-    oasf_api_validation:
-      disable: true            # Use embedded schemas (faster, no network dependency)
-      # schema_url: Not used when disabled
-      # strict_mode: Not used when disabled (embedded validation uses fixed behavior)
+    # OASF schema validation
+    # Since dir v1.8.0 this is the `oasf` entry in policy.operations; the old
+    # oasf_api_validation block is ignored and there is no embedded-schema mode.
+    # The chart default validates records at push, autosync and index against
+    # https://schema.oasf.outshift.com, which this example keeps.
 
     # Authentication settings (handles identity verification)
     # Supports both X.509 (X.509-SVID) and JWT (JWT-SVID) authentication
@@ -195,19 +194,22 @@ apiserver:
 
   # Casbin authorization policies (top-level, not in config)
   # Format: p,<subject>,<object>
-  # - subject: SPIFFE trust domain (e.g., example.org) or * for any
+  # - subject: SPIFFE trust domain (e.g., example.org), SPIFFE ID, or * for any
   # - object: gRPC method path or * for all methods
+  # Since dir v1.8.0, RequestRegistryCredentials is granted only by a rule that
+  # names the peer's SPIFFE ID; a trust-domain or * rule never grants it.
   authz_policies_csv: |
     p,example.org,*
     p,*,/agntcy.dir.store.v1.StoreService/Pull
     p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
     p,*,/agntcy.dir.store.v1.StoreService/Lookup
-    p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
+    # Add one rule per peer node allowed to sync from this one, e.g.:
+    # p,spiffe://partner.org/ns/dir/sa/dir-apiserver,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
 
   # Reconciler configuration
   reconciler:
     image:
-      tag: v1.7.0
+      tag: v1.9.0
 
   # PostgreSQL subchart configuration
   # Deploys PostgreSQL alongside the apiserver
@@ -216,7 +218,7 @@ apiserver:
     enabled: true
     image:
       tag: "latest"
-      digest: "sha256:d92a6bbf5184e327301856457e35cefcc32e19158e46a4012929e20daa9c178d"
+      digest: "sha256:b418fd5f001c272aad93ac1febf783f543ee45d8e359d58bd5afc3d2a9b62290"
     auth:
       username: "dir"
       password: "dir"
@@ -267,7 +269,7 @@ apiserver:
   # Zot registry configuration (subchart)
   zot:
     image:
-      tag: v2.1.20
+      tag: v2.1.23
 
     # Resources: use chart default for Kind (allows flexible scheduling)
     resources: {}
