@@ -52,6 +52,8 @@ jobs:
       - name: Scan image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # trivy-action v0.36.0 defaults to Trivy v0.70.0; pin the current release instead.
+          version: v0.76.2
           image-ref: ${{ matrix.image }}
           github-pat: ${{ secrets.GITHUB_TOKEN }}
           format: sarif
