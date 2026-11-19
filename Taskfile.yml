@@ -10,11 +10,35 @@ vars:
     - applications/spire/dev
     - applications/dex/dev
     - applications/dex-credentials/dev
+  # renovate: datasource=npm depName=renovate versioning=semver
+  RENOVATE_VERSION: "44.239.1"
 
 tasks:
   default:
     cmds:
       - task -l
+
+  deps:renovate:
+    desc: Install Renovate
+    internal: true
+    cmd: npm install -g renovate@{{.RENOVATE_VERSION}}
+    status:
+      - npm list -g --depth 0 renovate | grep -qF 'renovate@{{.RENOVATE_VERSION}}'
+
+  deps:renovate:sync:
+    desc: Sync dependencies with Renovate
+    summary: |
+      Pass extra CLI flags with RENOVATE_OPTS (e.g. task deps:renovate:sync RENOVATE_OPTS='--dry-run=lookup').
+      The platform defaults to local, so a local run only reports what it would update and
+      touches nothing on GitHub. The Dependencies workflow sets RENOVATE_PLATFORM to github.
+    deps:
+      - deps:renovate
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      RENOVATE_PLATFORM_EFFECTIVE:
+        sh: printf '%s' "${RENOVATE_PLATFORM:-local}"
+    cmds:
+      - renovate {{.RENOVATE_OPTS}} --platform "{{.RENOVATE_PLATFORM_EFFECTIVE}}"
 
   deps:vuln:chart:images:
     desc: List container images from a Helm chart directory containing config.json
