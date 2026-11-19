@@ -16,6 +16,7 @@
 replicaCount: 1
 
 image:
+  # renovate: datasource=docker depName=ghcr.io/dexidp/dex
   tag: v2.46.1-distroless
 
 config:

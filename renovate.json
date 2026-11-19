@@ -1,0 +1,157 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigestsToSemver",
+    ":semanticCommitTypeAll(chore)",
+    ":dependencyDashboard"
+  ],
+  "configMigration": true,
+  "enabledManagers": [
+    "custom.regex",
+    "github-actions"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^applications/[^/]+/[^/]+/config\\.json$/"
+      ],
+      "matchStrings": [
+        "\"chart_repo\":\\s*\"(?<registryUrl>https://[^\"]+)\",\\s*\"chart_name\":\\s*\"(?<depName>[^\"]+)\",\\s*\"chart_version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "helm",
+      "description": [
+        "Helm chart of an Argo CD application, served from an HTTPS chart repository."
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^applications/[^/]+/[^/]+/config\\.json$/"
+      ],
+      "matchStrings": [
+        "\"chart_repo\":\\s*\"ghcr\\.io\",\\s*\"chart_name\":\\s*\"(?<depName>[^\"]+)\",\\s*\"chart_version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/{{{depName}}}",
+      "description": [
+        "Helm chart of an Argo CD application, served as an OCI artifact from ghcr.io."
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^applications/[^/]+/[^/]+/values\\.yaml$/"
+      ],
+      "matchStrings": [
+        "(?m)^\\s*#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\r?\\n\\s*tag:\\s+\"?(?<currentValue>[^\"\\s]+)\"?(?:\\s*\\r?\\n\\s*digest:\\s+\"?(?<currentDigest>sha256:[a-f0-9]+)\"?)?"
+      ],
+      "description": [
+        "Image tag, and optional digest, in Helm values, named by the '# renovate:' comment above it.",
+        "Most pins here set only the tag and take the repository from the chart, so the comment names the image."
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/(^|/)Taskfile[^/]*\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "(?m)^\\s*#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?\\s*\\r?\\n\\s*[A-Z0-9_]+_VERSION:\\s+\"?(?<currentValue>[^\"@\\s]+)\"?\\s*$"
+      ],
+      "description": [
+        "Tool version in the Taskfile, named by the '# renovate:' comment above it."
+      ]
+    }
+  ],
+  "dependencyDashboard": {
+    "autoclose": true,
+    "labels": ["dependencies"]
+  },
+  "enabled": true,
+  "minimumReleaseAge": "3 days",
+  "schedule": ["before 6am on Monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["major"],
+      "enabled": false,
+      "description": ["Ignore major updates; they need a migration of the application values."]
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchCurrentValue": "/^v\\d+\\.\\d+\\.\\d+$/",
+      "versioning": "semver",
+      "description": [
+        "Tags like v1.9.1 (agntcy images and charts, zot, registry.k8s.io) are plain semver.",
+        "This keeps suffixed variants such as zot's -minimal and release candidates out of the candidates."
+      ]
+    },
+    {
+      "matchDepNames": ["envoyproxy/envoy"],
+      "versioning": "regex:^distroless-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$",
+      "description": ["Track the pinned distroless Envoy release, never the floating distroless-vX.Y-latest tags."]
+    },
+    {
+      "matchDepNames": ["ghcr.io/dexidp/dex"],
+      "versioning": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-distroless$",
+      "description": ["Stay on the distroless Dex image."]
+    },
+    {
+      "groupName": "dir",
+      "groupSlug": "dir",
+      "matchDepNames": [
+        "ghcr.io/agntcy/dir/helm-charts/dir",
+        "ghcr.io/agntcy/dir-apiserver",
+        "ghcr.io/agntcy/dir-reconciler"
+      ],
+      "description": ["The dir chart and the apiserver and reconciler images are released together."]
+    },
+    {
+      "groupName": "oidc-gateway",
+      "groupSlug": "oidc-gateway",
+      "matchDepNames": [
+        "ghcr.io/agntcy/oidc-gateway/helm-charts/oidc-gateway",
+        "ghcr.io/agntcy/oidc-gateway"
+      ],
+      "description": ["The oidc-gateway chart and image are released together."]
+    },
+    {
+      "groupName": "SPIRE",
+      "groupSlug": "spire",
+      "matchFileNames": [
+        "applications/spire/**",
+        "applications/spire-crds/**"
+      ],
+      "description": ["The spire and spire-crds charts and the images pinned in the spire values move as one stack."]
+    },
+    {
+      "groupName": "Dex",
+      "groupSlug": "dex",
+      "matchFileNames": ["applications/dex/**"],
+      "description": ["The Dex chart and its image move together."]
+    },
+    {
+      "groupName": "Github Actions",
+      "groupSlug": "github-actions",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["ci"],
+      "description": ["Group CI dependency updates in a single PR."]
+    },
+    {
+      "matchDatasources": ["npm"],
+      "matchDepNames": ["renovate"],
+      "enabled": true,
+      "addLabels": ["build"],
+      "description": ["Renovate only supports its latest major, so allow its self-updates even though majors are disabled."]
+    }
+  ],
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 5,
+  "printConfig": false,
+  "rebaseWhen": "behind-base-branch",
+  "reviewersFromCodeOwners": true,
+  "semanticCommits": "enabled",
+  "timezone": "Etc/UTC"
+}

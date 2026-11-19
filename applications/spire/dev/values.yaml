@@ -5,6 +5,7 @@ global:
     trustDomain: "example.org"
     tools:
       kubectl:
+        # renovate: datasource=docker depName=registry.k8s.io/kubectl
         tag: "v1.28.0"
 
   installAndUpgradeHooks:
@@ -15,6 +16,7 @@ global:
 
 spire-server:
   image:
+    # renovate: datasource=docker depName=ghcr.io/spiffe/spire-server
     tag: "1.16.0"
 
   federation:
@@ -22,6 +24,7 @@ spire-server:
 
   controllerManager:
     image:
+      # renovate: datasource=docker depName=ghcr.io/spiffe/spire-controller-manager
       tag: "0.8.1"
     className: dir-spire
 
@@ -30,6 +33,7 @@ spire-server:
 # without the currently open high/critical Trivy findings.
 spire-agent:
   image:
+    # renovate: datasource=docker depName=ghcr.io/spiffe/spire-agent
     tag: "1.16.0"
 
 spiffe-oidc-discovery-provider:
@@ -37,7 +41,9 @@ spiffe-oidc-discovery-provider:
 
 spiffe-csi-driver:
   image:
+    # renovate: datasource=docker depName=ghcr.io/spiffe/spiffe-csi-driver
     tag: "0.3.0"
   nodeDriverRegistrar:
     image:
+      # renovate: datasource=docker depName=registry.k8s.io/sig-storage/csi-node-driver-registrar
       tag: "v2.18.0"

@@ -5,6 +5,7 @@ apiserver:
 
   image:
     repository: ghcr.io/agntcy/dir-apiserver
+    # renovate: datasource=docker depName=ghcr.io/agntcy/dir-apiserver
     tag: v1.9.1
     pullPolicy: IfNotPresent
     pullSecrets: []
@@ -209,6 +210,7 @@ apiserver:
   # Reconciler configuration
   reconciler:
     image:
+      # renovate: datasource=docker depName=ghcr.io/agntcy/dir-reconciler
       tag: v1.9.1
 
   # PostgreSQL subchart configuration
@@ -217,6 +219,7 @@ apiserver:
   postgresql:
     enabled: true
     image:
+      # renovate: datasource=docker depName=docker.io/bitnami/postgresql
       tag: "latest"
       digest: "sha256:b418fd5f001c272aad93ac1febf783f543ee45d8e359d58bd5afc3d2a9b62290"
     auth:
@@ -269,6 +272,7 @@ apiserver:
   # Zot registry configuration (subchart)
   zot:
     image:
+      # renovate: datasource=docker depName=ghcr.io/project-zot/zot
       tag: v2.1.23
 
     # Resources: use chart default for Kind (allows flexible scheduling)
