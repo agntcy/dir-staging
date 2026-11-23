@@ -1,0 +1,18 @@
+# For: agntcy/dir-staging — onboarding/federation/streampresence.dev.yaml
+# Content follows onboarding/federation/.federation.web.template.yaml exactly
+# (https_web profile — no bootstrap bundle exchange required).
+
+# className for SPIRE Controller Manager resource matching
+# Standard value: dir-spire (do not change unless you have custom setup)
+className: dir-spire
+
+# Trust Domain: Your organization's SPIFFE trust domain
+trustDomain: streampresence.dev
+
+# Bundle Endpoint URL: Publicly accessible SPIRE federation endpoint
+# This must be accessible via HTTPS with a valid CA-signed certificate
+bundleEndpointURL: https://spire.streampresence.dev
+
+# Bundle Endpoint Profile: Configuration for https_web
+bundleEndpointProfile:
+  type: https_web
