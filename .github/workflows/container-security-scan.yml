@@ -45,8 +45,10 @@ jobs:
       - name: Set image name
         id: image-name
         run: |
-          # Extract image name from full reference (e.g., ghcr.io/owner/image:tag -> image)
-          IMAGE_NAME=$(echo "${{ matrix.image }}" | sed -E 's|.*/||; s|[:@].*||')
+          # Extract image name from full reference (e.g., ghcr.io/owner/image:tag -> image).
+          # A trailing -dev is dropped so dev and release variants share one SARIF category:
+          # alerts only close when a later analysis in the same category omits them.
+          IMAGE_NAME=$(echo "${{ matrix.image }}" | sed -E 's|.*/||; s|[:@].*||; s|-dev$||')
           echo "name=$IMAGE_NAME" >> $GITHUB_OUTPUT
 
       - name: Scan image
