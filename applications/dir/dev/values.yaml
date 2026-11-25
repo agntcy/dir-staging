@@ -4,9 +4,9 @@ apiserver:
   log_level: DEBUG
 
   image:
-    repository: ghcr.io/agntcy/dir-apiserver-dev
-    # renovate: datasource=docker depName=ghcr.io/agntcy/dir-apiserver-dev
-    tag: feat-main-e4a54a90
+    repository: ghcr.io/agntcy/dir-apiserver
+    # renovate: datasource=docker depName=ghcr.io/agntcy/dir-apiserver
+    tag: v1.9.2
     pullPolicy: IfNotPresent
     pullSecrets: []
   
@@ -210,9 +210,8 @@ apiserver:
   # Reconciler configuration
   reconciler:
     image:
-      repository: ghcr.io/agntcy/dir-reconciler-dev
-      # renovate: datasource=docker depName=ghcr.io/agntcy/dir-reconciler-dev
-      tag: feat-main-e4a54a90
+      # renovate: datasource=docker depName=ghcr.io/agntcy/dir-reconciler
+      tag: v1.9.2
 
   # PostgreSQL subchart configuration
   # Deploys PostgreSQL alongside the apiserver
